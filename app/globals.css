@@ -465,4 +465,205 @@ img {
   height: auto;
 }
 
+/* Accessibility Enhancements */
 
+/* High Contrast Mode */
+.high-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #333333;
+  --secondary-foreground: #ffffff;
+  --border: #ffffff;
+  --ring: #ffffff;
+}
+
+.high-contrast * {
+  border-color: #ffffff !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast button,
+.high-contrast .bg-white,
+.high-contrast .bg-blue-600,
+.high-contrast .bg-gray-100 {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #ffffff !important;
+}
+
+.high-contrast .text-white {
+  color: #ffffff !important;
+}
+
+/* Dark Mode Overrides */
+.dark-mode {
+  --background: #0f172a;
+  --foreground: #ededed;
+  --card: #1e293b;
+  --card-foreground: #ededed;
+  --primary: #ffffff;
+  --primary-foreground: #0f172a;
+  --secondary: #334155;
+  --secondary-foreground: #ededed;
+  --border: #475569;
+  --ring: #64748b;
+}
+
+.dark-mode body {
+  background-color: #0f172a;
+  color: #ededed;
+}
+
+.dark-mode .bg-gradient-to-b {
+  background: #0f172a !important;
+}
+
+.dark-mode .bg-transparent {
+  background-color: #0f172a !important;
+}
+
+/* Mission Card - Dark navy background in dark mode */
+.mission-card {
+  background-color: #ffffff;
+}
+
+.dark-mode .mission-card {
+  background-color: #1e293b !important;
+}
+
+.dark-mode .mission-card * {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .mission-card h3 {
+  color: #f8fafc !important;
+}
+
+.high-contrast .mission-card {
+  background-color: #ffffff !important;
+}
+
+.high-contrast .mission-card *,
+.high-contrast .mission-card h3 {
+  color: #ffffff !important;
+}
+
+/* Pricing Section - Dark navy background in dark mode */
+.dark-mode #pricing {
+  background-color: #1e293b !important;
+}
+
+/* Venture Capital box and other white backgrounds - Dark navy in dark mode */
+.dark-mode .bg-white {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .bg-white h4 {
+  color: #f8fafc !important;
+}
+
+.dark-mode .bg-white p {
+  color: #cbd5e1 !important;
+}
+
+/* Specific buttons to match Contact Sales darker navy style in dark mode */
+.dark-mode .get-started-btn,
+.dark-mode .learn-more-btn,
+.dark-mode .send-message-btn {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .get-started-btn:hover,
+.dark-mode .learn-more-btn:hover,
+.dark-mode .send-message-btn:hover {
+  background-color: #334155 !important;
+  color: #ffffff !important;
+}
+
+/* All titles white in dark mode except main hero title */
+.dark-mode h1:not(.hero-title),
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6 {
+  color: #ffffff !important;
+}
+
+/* Specific heading classes white in dark mode */
+.dark-mode .text-gray-900 {
+  color: #ffffff !important;
+}
+
+/* Card titles and component titles */
+.dark-mode .text-lg.font-semibold,
+.dark-mode .text-xl.font-semibold,
+.dark-mode .text-2xl.font-bold,
+.dark-mode .text-3xl.font-bold,
+.dark-mode .text-4xl.font-bold {
+  color: #ffffff !important;
+}
+
+/* Preserve hero title gradient - keep it as is */
+.dark-mode .bg-gradient-to-r.from-blue-400.via-purple-400.to-pink-400 {
+  color: transparent !important;
+}
+
+/* Sign In button text - navy color */
+.sign-in-btn {
+  color: #0f172a !important;
+}
+
+.dark-mode .sign-in-btn {
+  color: #0f172a !important;
+}
+
+.sign-in-btn:hover {
+  color: #0f172a !important;
+}
+
+.dark-mode .sign-in-btn:hover {
+  color: #0f172a !important;
+}
+
+/* Contact Sales button  */
+.contact-sales-btn {
+  background-color: #0f172a !important;
+  border: 1px solid #0f172a !important;
+  color: #ffffff !important;
+}
+
+.contact-sales-btn:hover {
+  background-color: #0f172a !important;
+  border: 1px solid #0f172a !important;
+  color: #ffffff !important;
+}
+
+/* Focus indicators for better accessibility */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
