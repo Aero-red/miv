@@ -3,44 +3,33 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { AIServices } from '@/lib/ai-services';
 import { triggerVentureRecalculation } from '@/lib/calculation-service';
+import { getUserContext, createDataAccessFilter, requireAuth, requirePermission } from '@/lib/user-context';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 // Validation schemas
+// Relaxed validation to allow partial submissions; server will fill defaults
 const createVentureSchema = z.object({
-  name: z.string().min(1, 'Venture name is required'),
-  sector: z.string().min(1, 'Sector is required'),
-  location: z.string().min(1, 'Location is required'),
-  contactEmail: z.string().email('Valid email is required'),
+  name: z.union([z.string(), z.undefined()]).optional(),
+  sector: z.union([z.string(), z.undefined()]).optional(),
+  location: z.union([z.string(), z.undefined()]).optional(),
+  contactEmail: z.union([z.string().email().or(z.literal('')), z.undefined()]).optional(),
   contactPhone: z.string().optional(),
   pitchSummary: z.string().optional(),
   inclusionFocus: z.string().optional(),
 
-  founderTypes: z.array(z.string()).min(1, 'Founder types are required'),
-  teamSize: z.string().optional(),
-  foundingYear: z.string().optional(),
+  founderTypes: z.array(z.string()).optional(),
+  // Accept strings from the form but we will coerce to numbers server-side
+  teamSize: z.union([z.string(), z.number()]).optional(),
+  foundingYear: z.union([z.string(), z.number()]).optional(),
   targetMarket: z.string().optional(),
   revenueModel: z.string().optional(),
   operationalReadiness: z.record(z.any()).optional(),
   capitalReadiness: z.record(z.any()).optional(),
   gedsiGoals: z.array(z.string()).optional(),
-  washingtonShortSet: z
-    .object({
-      seeing: z.enum(['no_difficulty', 'some_difficulty', 'a_lot_of_difficulty', 'cannot_do_at_all']).optional(),
-      hearing: z.enum(['no_difficulty', 'some_difficulty', 'a_lot_of_difficulty', 'cannot_do_at_all']).optional(),
-      walking: z.enum(['no_difficulty', 'some_difficulty', 'a_lot_of_difficulty', 'cannot_do_at_all']).optional(),
-      cognition: z.enum(['no_difficulty', 'some_difficulty', 'a_lot_of_difficulty', 'cannot_do_at_all']).optional(),
-      selfCare: z.enum(['no_difficulty', 'some_difficulty', 'a_lot_of_difficulty', 'cannot_do_at_all']).optional(),
-      communication: z.enum(['no_difficulty', 'some_difficulty', 'a_lot_of_difficulty', 'cannot_do_at_all']).optional(),
-    })
-    .optional(),
-  disabilityInclusion: z
-    .object({
-      disabilityLedLeadership: z.boolean().optional(),
-      inclusiveHiringPractices: z.boolean().optional(),
-      accessibleProductsOrServices: z.boolean().optional(),
-      notes: z.string().optional(),
-    })
-    .optional(),
+  washingtonShortSet: z.record(z.any()).optional(),
+  disabilityInclusion: z.record(z.any()).optional(),
   challenges: z.string().optional(),
   supportNeeded: z.string().optional(),
   timeline: z.string().optional(),
@@ -51,11 +40,16 @@ const updateVentureSchema = createVentureSchema.partial();
 // GET /api/ventures - List ventures with filtering
 export async function GET(request: NextRequest) {
   try {
-    // Disable authentication for development
-    // const session = await getServerSession();
-    // if (!session?.user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // Get user context for data access control
+    const userContext = await getUserContext();
+    if (!userContext) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Debug logging
+    console.log(`🔍 Ventures API called by: ${userContext.user.name} (${userContext.user.email})`);
+    console.log(`   Organization: ${userContext.organization}`);
+    console.log(`   Role: ${userContext.user.role}`);
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -67,18 +61,28 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: any = {};
+    // Create data access filter based on user context
+    const dataAccessFilter = createDataAccessFilter(userContext);
+    const baseWhere = dataAccessFilter.ventures;
+
+    // Build where clause with user access control
+    const where: any = {
+      AND: [baseWhere]
+    };
+
+    // Add search filters
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sector: { contains: search, mode: 'insensitive' } },
-        { location: { contains: search, mode: 'insensitive' } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { sector: { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+        ]
+      });
     }
-    if (sector) where.sector = sector;
-    if (stage) where.stage = stage;
-    if (status) where.status = status;
+    if (sector) where.AND.push({ sector });
+    if (stage) where.AND.push({ stage });
+    if (status) where.AND.push({ status });
 
     const [ventures, total] = await Promise.all([
       prisma.venture.findMany({
@@ -122,6 +126,9 @@ export async function GET(request: NextRequest) {
       prisma.venture.count({ where })
     ]);
 
+    // Debug logging
+    console.log(`📊 Returning ${ventures.length} ventures for ${userContext.user.name}`);
+
     return NextResponse.json({
       ventures,
       pagination: {
@@ -143,34 +150,94 @@ export async function GET(request: NextRequest) {
 // POST /api/ventures - Create new venture
 export async function POST(request: NextRequest) {
   try {
-    // Disable authentication for development
-    // const session = await getServerSession();
-    // if (!session?.user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    // Get user context and check permissions
+    const userContext = await getUserContext();
+    if (!userContext) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!userContext.canCreateVentures) {
+      return NextResponse.json({ error: 'Forbidden - Insufficient permissions to create ventures' }, { status: 403 });
+    }
 
     const body = await request.json();
     const validatedData = createVentureSchema.parse(body);
+    console.log('📝 Incoming venture payload:', body)
 
-    // Get user ID from session
-    // For development, use a default user or create one
-    let user = await prisma.user.findFirst();
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          name: 'Development User',
-          email: 'dev@miv.com',
-          role: 'ADMIN'
+    // Coerce teamSize and foundingYear to numbers compatible with Prisma schema
+    function parseTeamSizeToNumber(value: unknown): number | null {
+      if (typeof value === 'number') return value
+      if (typeof value !== 'string') return null
+      if (value.includes('+')) {
+        const base = parseInt(value.replace('+', '').trim(), 10)
+        return Number.isFinite(base) ? base : null
+      }
+      if (value.includes('-')) {
+        const parts = value.split('-').map(v => parseInt(v.trim(), 10)).filter(n => Number.isFinite(n))
+        if (parts.length === 2) {
+          // Use the upper bound as representative team size
+          return parts[1]
         }
-      });
+      }
+      const asInt = parseInt(value.trim(), 10)
+      return Number.isFinite(asInt) ? asInt : null
     }
+
+    function parseYearToNumber(value: unknown): number | null {
+      if (typeof value === 'number') return value
+      if (typeof value !== 'string') return null
+      const asInt = parseInt(value.trim(), 10)
+      return Number.isFinite(asInt) ? asInt : null
+    }
+
+    const teamSizeNumber = parseTeamSizeToNumber(validatedData.teamSize as any)
+    const foundingYearNumber = parseYearToNumber(validatedData.foundingYear as any)
+
+    // Defaults for required prisma fields
+    const safeName = (validatedData.name && String(validatedData.name).trim()) || 'Untitled Venture'
+    const safeSector = (validatedData.sector && String(validatedData.sector).trim()) || 'Other'
+    const safeLocation = (validatedData.location && String(validatedData.location).trim()) || 'Unknown'
+    const safeEmail = (validatedData.contactEmail && String(validatedData.contactEmail).trim()) || userContext.user.email || 'noreply@example.com'
+    const founderTypesArray = Array.isArray(validatedData.founderTypes) ? validatedData.founderTypes : []
 
     // Create venture
     const venture = await prisma.venture.create({
       data: {
-        ...validatedData,
-        founderTypes: JSON.stringify(validatedData.founderTypes),
-        createdById: user.id,
+        // Basic fields
+        name: safeName,
+        sector: safeSector,
+        location: safeLocation,
+        contactEmail: safeEmail,
+        contactPhone: validatedData.contactPhone,
+        pitchSummary: validatedData.pitchSummary,
+        inclusionFocus: validatedData.inclusionFocus,
+        // Coerced numeric fields
+        teamSize: teamSizeNumber ?? undefined,
+        foundingYear: foundingYearNumber ?? undefined,
+        // Business fields
+        targetMarket: validatedData.targetMarket,
+        revenueModel: validatedData.revenueModel,
+        website: (validatedData as any).website || undefined,
+        description: (validatedData as any).description || undefined,
+        revenue: (validatedData as any).revenue ? Number((validatedData as any).revenue) : undefined,
+        fundingRaised: (validatedData as any).fundingRaised ? Number((validatedData as any).fundingRaised) : undefined,
+        lastValuation: (validatedData as any).lastValuation ? Number((validatedData as any).lastValuation) : undefined,
+        tags: (validatedData as any).tags || undefined,
+        intakeDate: (validatedData as any).intakeDate ? new Date((validatedData as any).intakeDate) : undefined,
+        screeningDate: (validatedData as any).screeningDate ? new Date((validatedData as any).screeningDate) : undefined,
+        dueDiligenceStart: (validatedData as any).dueDiligenceStart ? new Date((validatedData as any).dueDiligenceStart) : undefined,
+        dueDiligenceEnd: (validatedData as any).dueDiligenceEnd ? new Date((validatedData as any).dueDiligenceEnd) : undefined,
+        investmentReadyAt: (validatedData as any).investmentReadyAt ? new Date((validatedData as any).investmentReadyAt) : undefined,
+        nextReviewAt: (validatedData as any).nextReviewAt ? new Date((validatedData as any).nextReviewAt) : undefined,
+        status: (validatedData as any).status || undefined,
+        stage: (validatedData as any).stage || undefined,
+        operationalReadiness: validatedData.operationalReadiness as any,
+        capitalReadiness: validatedData.capitalReadiness as any,
+        gedsiGoals: validatedData.gedsiGoals as any,
+        // Store founderTypes as JSON string to match existing logic
+        founderTypes: JSON.stringify(founderTypesArray),
+        createdById: userContext.user.id,
+        assignedToId: (validatedData as any).assignedToId || undefined,
       } as any,
       include: {
         createdBy: {
@@ -181,74 +248,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Trigger initial calculations for the new venture
-    triggerVentureRecalculation(venture.id).catch(console.error);
+    triggerVentureRecalculation(venture.id).catch(err => console.error('calc error', err));
 
-    // AI-powered analysis (async)
-    Promise.all([
-      // Generate GEDSI metrics suggestions
-      AIServices.analyzeGEDSIMetrics(venture).then(async (analysis) => {
-        await prisma.activity.create({
-          data: {
-            ventureId: venture.id,
-            userId: user.id,
-            type: 'NOTE_ADDED',
-            title: 'AI GEDSI Analysis',
-            description: analysis,
-            metadata: { type: 'ai_analysis', category: 'gedsi' }
-          }
-        });
-      }).catch(console.error),
-
-      // Assess venture readiness
-      AIServices.assessVentureReadiness(venture).then(async (assessment) => {
-        await prisma.activity.create({
-          data: {
-            ventureId: venture.id,
-            userId: user.id,
-            type: 'NOTE_ADDED',
-            title: 'AI Readiness Assessment',
-            description: assessment,
-            metadata: { type: 'ai_analysis', category: 'readiness' }
-          }
-        });
-      }).catch(console.error),
-
-      // Generate tags
-      AIServices.generateTags(venture).then(async (tags) => {
-        if (tags.length > 0) {
-          await prisma.activity.create({
-            data: {
-              ventureId: venture.id,
-              userId: user.id,
-              type: 'NOTE_ADDED',
-              title: 'AI Generated Tags',
-              description: JSON.stringify(tags),
-              metadata: { type: 'ai_analysis', category: 'tags', tags }
-            }
-          });
-        }
-      }).catch(console.error),
-
-      // Risk assessment
-      AIServices.assessRisk(venture).then(async (riskAssessment) => {
-        await prisma.activity.create({
-          data: {
-            ventureId: venture.id,
-            userId: user.id,
-            type: 'NOTE_ADDED',
-            title: 'AI Risk Assessment',
-            description: riskAssessment,
-            metadata: { type: 'ai_analysis', category: 'risk' }
-          }
-        });
-      }).catch(console.error)
-    ]);
+    // Note: background AI activity logs are disabled to avoid duplicate entries.
 
     // Create activity log
     await prisma.activity.create({
       data: {
         ventureId: venture.id,
-        userId: user.id,
+        userId: userContext.user.id,
         type: 'VENTURE_CREATED',
         title: 'Venture Created',
         description: `New venture "${venture.name}" was created`,
@@ -257,13 +265,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(venture, { status: 201 });
   } catch (error) {
+    console.error('❌ Venture create error:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
       );
     }
-    console.error('Error creating venture:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

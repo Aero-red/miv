@@ -1,58 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
 
-// Validation schemas
+// Validation schema for announcements
 const createAnnouncementSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  content: z.string().min(1, 'Content is required'),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
+  title: z.string().min(1, 'Announcement title is required'),
+  content: z.string().min(1, 'Announcement content is required'),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
   isActive: z.boolean().default(true),
-  expiresAt: z.string().optional(), // ISO date string
-  authorId: z.string().min(1, 'Author is required'),
-});
+  expiresAt: z.string().optional(),
+})
 
-const updateAnnouncementSchema = createAnnouncementSchema.partial();
+const updateAnnouncementSchema = createAnnouncementSchema.partial()
 
-// GET /api/team/announcements - Get all announcements
+// GET /api/team/announcements - List announcements
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
-    const priority = searchParams.get('priority') || '';
-    const isActive = searchParams.get('isActive');
-    const authorId = searchParams.get('authorId') || '';
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const page = parseInt(searchParams.get('page') || '1');
-    const skip = (page - 1) * limit;
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const search = searchParams.get('search') || ''
+    const priority = searchParams.get('priority') || ''
+    const isActive = searchParams.get('isActive')
 
-    const where: any = {};
-    
+    const skip = (page - 1) * limit
+
+    // Build where clause
+    const where: any = {}
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { content: { contains: search, mode: 'insensitive' } },
-      ];
+      ]
     }
-    
-    if (priority) {
-      where.priority = priority;
-    }
-    
-    if (isActive !== null) {
-      where.isActive = isActive === 'true';
-    }
-    
-    if (authorId) {
-      where.authorId = authorId;
-    }
-
-    // Filter out expired announcements unless explicitly requested
-    if (isActive !== 'false') {
-      where.OR = [
-        { expiresAt: null },
-        { expiresAt: { gt: new Date() } }
-      ];
+    if (priority) where.priority = priority
+    if (isActive !== null && isActive !== undefined) {
+      where.isActive = isActive === 'true'
     }
 
     const [announcements, total] = await Promise.all([
@@ -60,24 +44,15 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           author: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              image: true,
-            }
+            select: { id: true, name: true, email: true, role: true }
           }
         },
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' }
-        ],
+        orderBy: { createdAt: 'desc' },
         skip,
-        take: limit
+        take: limit,
       }),
       prisma.announcement.count({ where })
-    ]);
+    ])
 
     return NextResponse.json({
       announcements,
@@ -87,71 +62,81 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit)
       }
-    });
-
+    })
   } catch (error) {
-    console.error('Error fetching announcements:', error);
+    console.error('Error fetching announcements:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
 // POST /api/team/announcements - Create new announcement
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validatedData = createAnnouncementSchema.parse(body);
+    // Disable authentication for development
+    // const session = await getServerSession()
+    // if (!session?.user) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
 
-    // Verify author exists
-    const author = await prisma.user.findUnique({
-      where: { id: validatedData.authorId }
-    });
+    const body = await request.json()
+    const validatedData = createAnnouncementSchema.parse(body)
 
-    if (!author) {
-      return NextResponse.json(
-        { error: 'Author not found' },
-        { status: 400 }
-      );
+    // Get user ID from session (for development, use first user)
+    let user = await prisma.user.findFirst()
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          name: 'Development User',
+          email: 'dev@miv.com',
+          role: 'ADMIN'
+        }
+      })
     }
 
+    // Create announcement
     const announcement = await prisma.announcement.create({
       data: {
-        title: validatedData.title,
-        content: validatedData.content,
-        priority: validatedData.priority,
-        isActive: validatedData.isActive,
+        ...validatedData,
         expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : null,
-        authorId: validatedData.authorId,
+        authorId: user.id,
       },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            image: true,
-          }
+          select: { id: true, name: true, email: true, role: true }
         }
       }
-    });
+    })
 
-    return NextResponse.json(announcement, { status: 201 });
+    // Create activity log
+    await prisma.activity.create({
+      data: {
+        userId: user.id,
+        type: 'NOTE_ADDED',
+        title: 'Announcement Created',
+        description: `New announcement "${announcement.title}" was published`,
+        metadata: {
+          announcementId: announcement.id,
+          type: 'announcement_created',
+          priority: announcement.priority
+        }
+      }
+    })
 
+    return NextResponse.json(announcement, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation failed', details: error.errors },
         { status: 400 }
-      );
+      )
     }
-
-    console.error('Error creating announcement:', error);
+    console.error('Error creating announcement:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }

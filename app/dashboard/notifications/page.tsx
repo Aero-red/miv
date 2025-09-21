@@ -23,7 +23,7 @@ interface Notification {
   type: 'info' | 'warning' | 'success' | 'error'
   title: string
   message: string
-  read: boolean
+  isRead: boolean
   createdAt: string
   userId: string
 }
@@ -70,7 +70,7 @@ export default function NotificationsPage() {
 
       if (response.ok) {
         setNotifications(prev => 
-          prev.map(n => n.id === id ? { ...n, read: true } : n)
+          prev.map(n => n.id === id ? { ...n, isRead: true } : n)
         )
       }
     } catch (error) {
@@ -86,7 +86,7 @@ export default function NotificationsPage() {
 
       if (response.ok) {
         setNotifications(prev => 
-          prev.map(n => ({ ...n, read: true }))
+          prev.map(n => ({ ...n, isRead: true }))
         )
       }
     } catch (error) {
@@ -113,8 +113,8 @@ export default function NotificationsPage() {
                          notification.message.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = typeFilter === 'all' || notification.type === typeFilter
     const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'read' && notification.read) ||
-                         (statusFilter === 'unread' && !notification.read)
+                         (statusFilter === 'read' && notification.isRead) ||
+                         (statusFilter === 'unread' && !notification.isRead)
     
     return matchesSearch && matchesType && matchesStatus
   })
@@ -258,7 +258,7 @@ export default function NotificationsPage() {
           </Card>
         ) : (
           filteredNotifications.map((notification) => (
-            <Card key={notification.id} className={`${!notification.read ? 'border-blue-200 bg-blue-50' : ''}`}>
+            <Card key={notification.id} className={`${!notification.isRead ? 'border-blue-200 bg-blue-50' : ''}`}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4 flex-1">
@@ -273,7 +273,7 @@ export default function NotificationsPage() {
                         <Badge className={getNotificationBadgeColor(notification.type)}>
                           {notification.type}
                         </Badge>
-                        {!notification.read && (
+                        {!notification.isRead && (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800">
                             New
                           </Badge>
@@ -289,7 +289,7 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    {!notification.read && (
+                    {!notification.isRead && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -327,13 +327,13 @@ export default function NotificationsPage() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {notifications.filter(n => !n.read).length}
+                {notifications.filter(n => !n.isRead).length}
               </div>
               <div className="text-sm text-gray-600">Unread</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {notifications.filter(n => n.read).length}
+                {notifications.filter(n => n.isRead).length}
               </div>
               <div className="text-sm text-gray-600">Read</div>
             </div>

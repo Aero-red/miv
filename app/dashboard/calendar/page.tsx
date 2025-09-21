@@ -32,8 +32,22 @@ import {
   ArrowDownRight,
   CalendarDays,
   CalendarRange,
-  CalendarCheck
+  CalendarCheck,
+  X,
+  Save,
+  Trash2
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Event {
   id: string
@@ -83,6 +97,21 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
+  const [showNewEventDialog, setShowNewEventDialog] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [showEventDialog, setShowEventDialog] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    startDate: '',
+    startTime: '',
+    endTime: '',
+    location: '',
+    type: 'meeting' as const,
+    priority: 'medium' as const,
+    status: 'scheduled' as const
   })
 
   // Load data on component mount
@@ -136,6 +165,140 @@ export default function CalendarPage() {
       setError(error instanceof Error ? error.message : 'Failed to load calendar data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const openNewEventDialog = () => {
+    setFormData({
+      title: '',
+      description: '',
+      startDate: new Date().toISOString().split('T')[0],
+      startTime: '',
+      endTime: '',
+      location: '',
+      type: 'meeting',
+      priority: 'medium',
+      status: 'scheduled'
+    })
+    setIsEditing(false)
+    setShowNewEventDialog(true)
+  }
+
+  const handleCreateEvent = async () => {
+    if (!formData.title || !formData.startDate) {
+      setError('Title and start date are required')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          organizerId: 'default-user-id' // TODO: Get from session
+        })
+      })
+
+      if (response.ok) {
+        await loadCalendarData()
+        setShowNewEventDialog(false)
+        console.log('✅ Event created successfully')
+      } else {
+        throw new Error('Failed to create event')
+      }
+    } catch (error) {
+      console.error('❌ Error creating event:', error)
+      setError(error instanceof Error ? error.message : 'Failed to create event')
+    }
+  }
+
+  const handleViewEvent = (event: Event) => {
+    setSelectedEvent(event)
+    setShowEventDialog(true)
+  }
+
+  const openEditEvent = (event: Event) => {
+    setFormData({
+      title: event.title,
+      description: event.description,
+      startDate: event.startDate,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+      type: event.type as any,
+      priority: event.priority as any,
+      status: event.status as any
+    })
+    setSelectedEvent(event)
+    setIsEditing(true)
+    setShowNewEventDialog(true)
+  }
+
+  const handleUpdateEvent = async () => {
+    if (!selectedEvent || !formData.title || !formData.startDate) {
+      setError('Title and start date are required')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/calendar/events/${selectedEvent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (response.ok) {
+        await loadCalendarData()
+        setShowNewEventDialog(false)
+        setIsEditing(false)
+        setSelectedEvent(null)
+        console.log('✅ Event updated successfully')
+      } else {
+        throw new Error('Failed to update event')
+      }
+    } catch (error) {
+      console.error('❌ Error updating event:', error)
+      setError(error instanceof Error ? error.message : 'Failed to update event')
+    }
+  }
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/calendar/events/${eventId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        await loadCalendarData()
+        console.log('✅ Event deleted successfully')
+        alert('Event deleted successfully!')
+      } else {
+        throw new Error('Failed to delete event')
+      }
+    } catch (error) {
+      console.error('❌ Error deleting event:', error)
+      setError(error instanceof Error ? error.message : 'Failed to delete event')
+      alert('Failed to delete event. Please try again.')
+    }
+  }
+
+  const handleShareEvent = (event: Event) => {
+    if (navigator.share) {
+      navigator.share({
+        title: event.title,
+        text: `${event.title} - ${event.description}`,
+        url: window.location.href
+      })
+    } else {
+      // Fallback: copy to clipboard
+      const shareText = `${event.title}\n${event.description}\nDate: ${event.startDate} ${event.startTime}\nLocation: ${event.location}`
+      navigator.clipboard.writeText(shareText)
+      console.log('✅ Event details copied to clipboard')
     }
   }
 
@@ -286,7 +449,7 @@ export default function CalendarPage() {
             Manage team schedules, meetings, and important events
           </p>
         </div>
-        <Button>
+        <Button onClick={openNewEventDialog}>
           <Plus className="mr-2 h-4 w-4" />
           New Event
         </Button>
@@ -617,16 +780,16 @@ export default function CalendarPage() {
                     </div>
                     
                     <div className="flex items-center gap-2 ml-4">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => handleViewEvent(event)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => openEditEvent(event)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => handleShareEvent(event)}>
                         <Share2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteEvent(event.id)}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </div>
@@ -723,7 +886,7 @@ export default function CalendarPage() {
                       <div className="flex items-center gap-2">
                         {getPriorityBadge(event.priority)}
                         {getStatusBadge(event.status)}
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewEvent(event)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </div>
@@ -767,7 +930,7 @@ export default function CalendarPage() {
                       <div className="flex items-center gap-2">
                         {getPriorityBadge(event.priority)}
                         {getStatusBadge(event.status)}
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewEvent(event)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </div>
@@ -777,7 +940,7 @@ export default function CalendarPage() {
                   <div className="text-center py-8">
                     <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No deadlines found.</p>
-                    <Button className="mt-4" onClick={loadCalendarData}>
+                    <Button className="mt-4" onClick={openNewEventDialog}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Deadline
                     </Button>
@@ -788,6 +951,245 @@ export default function CalendarPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Event Creation/Edit Dialog */}
+      <Dialog open={showNewEventDialog} onOpenChange={setShowNewEventDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Edit Event' : 'Create New Event'}</DialogTitle>
+            <DialogDescription>
+              {isEditing ? 'Update the event details below.' : 'Fill in the details to create a new calendar event.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                className="col-span-3"
+                placeholder="Event title"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="description" className="text-right pt-2">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="col-span-3"
+                placeholder="Event description"
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startDate" className="text-right">Date *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">Start Time</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                className="col-span-1"
+              />
+              <Label htmlFor="endTime" className="text-center">End Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                className="col-span-1"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="location" className="text-right">Location</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({...formData, location: e.target.value})}
+                className="col-span-3"
+                placeholder="Event location"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">Type</Label>
+              <Select value={formData.type} onValueChange={(value: any) => setFormData({...formData, type: value})}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="call">Call</SelectItem>
+                  <SelectItem value="board_meeting">Board Meeting</SelectItem>
+                  <SelectItem value="due_diligence">Due Diligence</SelectItem>
+                  <SelectItem value="presentation">Presentation</SelectItem>
+                  <SelectItem value="deadline">Deadline</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="priority" className="text-right">Priority</Label>
+              <Select value={formData.priority} onValueChange={(value: any) => setFormData({...formData, priority: value})}>
+                <SelectTrigger className="col-span-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Label htmlFor="status" className="text-center">Status</Label>
+              <Select value={formData.status} onValueChange={(value: any) => setFormData({...formData, status: value})}>
+                <SelectTrigger className="col-span-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewEventDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={isEditing ? handleUpdateEvent : handleCreateEvent}>
+              <Save className="mr-2 h-4 w-4" />
+              {isEditing ? 'Update Event' : 'Create Event'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Event View Dialog */}
+      <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{selectedEvent?.title}</DialogTitle>
+            <DialogDescription>Event Details</DialogDescription>
+          </DialogHeader>
+          
+          {selectedEvent && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Description</Label>
+                  <p className="text-sm mt-1">{selectedEvent.description || 'No description provided'}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Type</Label>
+                    <div className="mt-1">{getEventTypeBadge(selectedEvent.type)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Priority</Label>
+                    <div className="mt-1">{getPriorityBadge(selectedEvent.priority)}</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Date</Label>
+                    <p className="text-sm mt-1">{selectedEvent.startDate}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Time</Label>
+                    <p className="text-sm mt-1">
+                      {selectedEvent.startTime} {selectedEvent.endTime && `- ${selectedEvent.endTime}`}
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Location</Label>
+                  <p className="text-sm mt-1">{selectedEvent.location || 'No location specified'}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Status</Label>
+                    <div className="mt-1">{getStatusBadge(selectedEvent.status)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Organizer</Label>
+                    <p className="text-sm mt-1">{selectedEvent.organizer || 'Unknown'}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Attendees</Label>
+                  <p className="text-sm mt-1">
+                    {selectedEvent.attendees.length > 0 
+                      ? selectedEvent.attendees.join(', ') 
+                      : 'No attendees specified'
+                    }
+                  </p>
+                </div>
+                
+                {selectedEvent.notes && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Notes</Label>
+                    <p className="text-sm mt-1">{selectedEvent.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEventDialog(false)}>
+              Close
+            </Button>
+            <Button variant="outline" onClick={() => {
+              if (selectedEvent) {
+                setShowEventDialog(false)
+                openEditEvent(selectedEvent)
+              }
+            }}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+            <Button variant="outline" onClick={() => selectedEvent && handleShareEvent(selectedEvent)}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </Button>
+            <Button variant="destructive" onClick={() => {
+              if (selectedEvent) {
+                setShowEventDialog(false)
+                handleDeleteEvent(selectedEvent.id)
+              }
+            }}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

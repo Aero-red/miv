@@ -53,11 +53,15 @@ interface Dashboard {
   name: string
   description: string
   category: string
-  widgets: number
-  lastModified: string
+  widgets: any
+  lastModified?: string
   isPublic: boolean
   isFavorite: boolean
-  createdBy: string
+  createdBy: string | { name: string }
+  createdAt?: string
+  updatedAt?: string
+  viewCount?: number
+  tags?: string[]
 }
 
 interface Widget {
@@ -145,6 +149,22 @@ const categories = [
   "Financial",
   "Custom"
 ]
+
+// Helper function to format date as "X hours ago", "X days ago", etc.
+const formatTimeAgo = (dateString: string): string => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffWeeks = Math.floor(diffDays / 7)
+
+  if (diffHours < 1) return "Just now"
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks > 1 ? 's' : ''} ago`
+  return date.toLocaleDateString()
+}
 
 export default function CustomDashboardsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -391,10 +411,16 @@ export default function CustomDashboardsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboards.reduce((sum, d) => sum + d.widgets, 0)}
+              {dashboards.reduce((sum, d) => {
+                const widgetCount = typeof d.widgets === 'object' ? (d.widgets?.layout?.length || 0) : (d.widgets || 0)
+                return sum + widgetCount
+              }, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Average {dashboards.length > 0 ? Math.round(dashboards.reduce((sum, d) => sum + d.widgets, 0) / dashboards.length) : 0} per dashboard
+              Average {dashboards.length > 0 ? Math.round(dashboards.reduce((sum, d) => {
+                const widgetCount = typeof d.widgets === 'object' ? (d.widgets?.layout?.length || 0) : (d.widgets || 0)
+                return sum + widgetCount
+              }, 0) / dashboards.length) : 0} per dashboard
             </p>
           </CardContent>
         </Card>
@@ -419,7 +445,10 @@ export default function CustomDashboardsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboards.filter(d => d.lastModified.includes("hour") || d.lastModified.includes("day") || d.lastModified.includes("Just now")).length}
+              {dashboards.filter(d => {
+                const timeAgo = d.lastModified || (d.updatedAt ? formatTimeAgo(d.updatedAt) : '')
+                return timeAgo.includes("hour") || timeAgo.includes("day") || timeAgo.includes("Just now")
+              }).length}
             </div>
             <p className="text-xs text-muted-foreground">
               In the last 24 hours
@@ -551,7 +580,7 @@ export default function CustomDashboardsPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Widgets</span>
-                      <span className="font-medium">{dashboard.widgets}</span>
+                      <span className="font-medium">{typeof dashboard.widgets === 'object' ? (dashboard.widgets?.layout?.length || 0) : (dashboard.widgets || 0)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Category</span>
@@ -559,11 +588,11 @@ export default function CustomDashboardsPage() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Last modified</span>
-                      <span className="text-muted-foreground">{dashboard.lastModified}</span>
+                      <span className="text-muted-foreground">{dashboard.lastModified || (dashboard.updatedAt ? formatTimeAgo(dashboard.updatedAt) : 'Unknown')}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Created by</span>
-                      <span className="text-muted-foreground">{dashboard.createdBy}</span>
+                      <span className="text-muted-foreground">{typeof dashboard.createdBy === 'string' ? dashboard.createdBy : dashboard.createdBy?.name || 'Unknown'}</span>
                     </div>
                     
                     <div className="flex items-center gap-2 pt-2">
@@ -976,9 +1005,9 @@ export default function CustomDashboardsPage() {
                   <span className="font-medium text-sm">Current Dashboard Info</span>
                 </div>
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <div>Widgets: {selectedDashboard.widgets}</div>
-                  <div>Created: {selectedDashboard.lastModified}</div>
-                  <div>Created by: {selectedDashboard.createdBy}</div>
+                  <div>Widgets: {typeof selectedDashboard.widgets === 'object' ? (selectedDashboard.widgets?.layout?.length || 0) : (selectedDashboard.widgets || 0)}</div>
+                  <div>Created: {selectedDashboard.lastModified || (selectedDashboard.updatedAt ? formatTimeAgo(selectedDashboard.updatedAt) : 'Unknown')}</div>
+                  <div>Created by: {typeof selectedDashboard.createdBy === 'string' ? selectedDashboard.createdBy : selectedDashboard.createdBy?.name || 'Unknown'}</div>
                 </div>
               </div>
             )}

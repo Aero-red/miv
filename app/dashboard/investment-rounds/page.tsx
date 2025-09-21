@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { calculateGEDSIScore, calculateImpactScore } from "@/lib/gedsi-utils"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -304,41 +305,55 @@ const mockInvestmentRounds: InvestmentRound[] = [
   }
 ]
 
+// Safely parse founder types coming from various formats in DB
+const parseFounderTypesSafe = (raw: any): string[] => {
+  const allowed = new Set([
+    'women-led',
+    'youth-led',
+    'disability-inclusive',
+    'rural-focus',
+    'indigenous-led',
+    'refugee-led',
+    'veteran-led',
+  ])
+
+  const normalize = (s: string) => s.trim().toLowerCase().replace(/[\s_]+/g, '-')
+
+  if (!raw) return []
+  if (Array.isArray(raw)) {
+    return raw.map(String).map(normalize).filter(t => allowed.has(t))
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    // Try JSON first when it looks like a JSON array or quoted string
+    try {
+      if (trimmed.startsWith('[') || trimmed.startsWith('{') || trimmed.startsWith('"')) {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) {
+          return parsed.map(String).map(normalize).filter(t => allowed.has(t))
+        }
+        if (typeof parsed === 'string') {
+          const token = normalize(parsed)
+          return allowed.has(token) ? [token] : []
+        }
+      }
+    } catch (_) {
+      // fall through to non-JSON handling
+    }
+
+    // Handle delimited or enum-like strings (e.g., "YOUTH_LED", "women-led, rural-focus")
+    const tokens = trimmed.includes(',') ? trimmed.split(',') : [trimmed]
+    return tokens.map(String).map(normalize).filter(t => allowed.has(t))
+  }
+  return []
+}
+
 // Helper function to transform venture data to investment round data
 const transformVentureToRound = (venture: Venture): InvestmentRound => {
-  const founderTypes = venture.founderTypes ? JSON.parse(venture.founderTypes) : []
+  const founderTypes = parseFounderTypesSafe(venture.founderTypes)
   
-  // Use consistent GEDSI score from AI analysis (standard across platform)
-  const getGedsiScore = () => {
-    if (venture.aiAnalysis) {
-      try {
-        const aiAnalysis = typeof venture.aiAnalysis === 'string' 
-          ? JSON.parse(venture.aiAnalysis) 
-          : venture.aiAnalysis
-        
-        // Use the AI-calculated GEDSI score (standard across platform)
-        return aiAnalysis.gedsiScore || aiAnalysis.gedsiAlignment || 75
-      } catch (error) {
-        console.warn('Error parsing AI analysis for', venture.name, error)
-      }
-    }
-    
-    // Fallback: Calculate from founder types (consistent with AI service)
-    let score = 50 // Base score
-    const founderTypes = venture.founderTypes ? JSON.parse(venture.founderTypes) : []
-    
-    if (founderTypes.includes('women-led')) score += 15
-    if (founderTypes.includes('disability-inclusive')) score += 15
-    if (founderTypes.includes('rural-focus')) score += 10
-    if (founderTypes.includes('indigenous-led')) score += 10
-    
-    const inclusionFocus = venture.inclusionFocus?.toLowerCase() || ''
-    if (inclusionFocus.includes('gender') || inclusionFocus.includes('women')) score += 10
-    if (inclusionFocus.includes('disability') || inclusionFocus.includes('accessibility')) score += 10
-    if (inclusionFocus.includes('rural') || inclusionFocus.includes('community')) score += 10
-    
-    return Math.min(score, 100)
-  }
+  // Use centralized GEDSI calculation
+  const getGedsiScore = () => calculateGEDSIScore(venture)
   
   const gedsiScore = getGedsiScore()
 
@@ -452,19 +467,7 @@ const transformVentureToRound = (venture: Venture): InvestmentRound => {
     location: venture.location,
     sector: venture.sector,
     gedsiScore,
-    impactScore: (() => {
-      if (venture.aiAnalysis) {
-        try {
-          const aiAnalysis = typeof venture.aiAnalysis === 'string' 
-            ? JSON.parse(venture.aiAnalysis) 
-            : venture.aiAnalysis
-          return aiAnalysis.impactScore || Math.min(gedsiScore + 5, 100)
-        } catch (error) {
-          console.warn('Error parsing AI analysis impact score for', venture.name)
-        }
-      }
-      return Math.min(gedsiScore + Math.floor(Math.random() * 10), 100)
-    })(),
+    impactScore: calculateImpactScore(venture),
     sustainabilityScore: (() => {
       if (venture.aiAnalysis) {
         try {

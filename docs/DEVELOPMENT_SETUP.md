@@ -49,10 +49,12 @@ cp .env.example .env.local
 # Edit .env.local with your configuration
 ```
 
-### 4. Set Up Database
+### 4. Set Up Database (SQLite dev)
 
 ```bash
-npm run db:setup
+npm run db:generate
+npm run db:push
+npm run db:seed
 ```
 
 ### 5. Start Development Server
@@ -72,8 +74,6 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application runn
 | Software | Version | Purpose |
 |----------|---------|---------|
 | **Node.js** | 20.x LTS | JavaScript runtime |
-| **PostgreSQL** | 15.x | Primary database |
-| **Redis** | 7.x | Caching and sessions |
 | **Git** | 2.x | Version control |
 | **Docker** | 20.x | Containerization (optional) |
 
@@ -83,8 +83,7 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application runn
 |------|---------|--------------|
 | **VS Code** | Code editor | [Download](https://code.visualstudio.com/) |
 | **Postman** | API testing | [Download](https://www.postman.com/) |
-| **DBeaver** | Database client | [Download](https://dbeaver.io/) |
-| **Redis Insight** | Redis client | [Download](https://redis.com/redis-enterprise/redis-insight/) |
+| **Prisma Studio** | DB browser for Prisma/SQLite | [Docs](https://www.prisma.io/docs/concepts/components/prisma-studio) |
 
 ### VS Code Extensions
 
@@ -106,70 +105,7 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application runn
 ---
 
 ## 🗄️ Database Setup
-
-### PostgreSQL Installation
-
-#### **macOS (using Homebrew)**
-
-```bash
-# Install PostgreSQL
-brew install postgresql@15
-
-# Start PostgreSQL service
-brew services start postgresql@15
-
-# Create database
-createdb miv_platform_dev
-```
-
-#### **Ubuntu/Debian**
-
-```bash
-# Add PostgreSQL repository
-sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-sudo apt-get update
-
-# Install PostgreSQL
-sudo apt-get install postgresql-15 postgresql-contrib-15
-
-# Create database
-sudo -u postgres createdb miv_platform_dev
-```
-
-#### **Windows**
-
-1. Download PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
-2. Run the installer
-3. Create database using pgAdmin or command line
-
-### Redis Installation
-
-#### **macOS (using Homebrew)**
-
-```bash
-# Install Redis
-brew install redis
-
-# Start Redis service
-brew services start redis
-```
-
-#### **Ubuntu/Debian**
-
-```bash
-# Install Redis
-sudo apt-get install redis-server
-
-# Start Redis service
-sudo systemctl start redis-server
-```
-
-#### **Windows**
-
-1. Download Redis from [redis.io](https://redis.io/download)
-2. Run the installer
-3. Start Redis service
+SQLite is used for local development. The database file lives at `prisma/dev.db`.
 
 ### Database Configuration
 
@@ -182,8 +118,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -256,35 +192,18 @@ npm run db:studio
 Create a `.env.local` file in the root directory:
 
 ```bash
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/miv_platform_dev"
-REDIS_URL="redis://localhost:6379"
-
-# Authentication
-AUTH0_DOMAIN="your-domain.auth0.com"
-AUTH0_CLIENT_ID="your-client-id"
-AUTH0_CLIENT_SECRET="your-client-secret"
-NEXTAUTH_SECRET="your-nextauth-secret"
+# NextAuth
 NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-nextauth-secret"
 
-# AI Services
-OPENAI_API_KEY="your-openai-api-key"
-ANTHROPIC_API_KEY="your-anthropic-api-key"
-GOOGLE_AI_API_KEY="your-google-ai-api-key"
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
-# Infrastructure (for production)
-ELASTICSEARCH_URL="http://localhost:9200"
-KAFKA_BROKERS="localhost:9092"
-
-# File Storage
-AWS_ACCESS_KEY_ID="your-aws-access-key"
-AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
-AWS_REGION="us-east-1"
-AWS_S3_BUCKET="miv-platform-files"
-
-# Monitoring
-SENTRY_DSN="your-sentry-dsn"
-DATADOG_API_KEY="your-datadog-api-key"
+# AI Services (optional)
+OPENAI_API_KEY="..."
+ANTHROPIC_API_KEY="..."
+GOOGLE_GENERATIVE_AI_API_KEY="..."
 ```
 
 ### Environment Validation
@@ -322,11 +241,7 @@ export const env = envSchema.parse(process.env)
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "next lint --fix",
-    "type-check": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -449,32 +364,7 @@ test(analytics): add unit tests for analytics module
 ## 🧪 Testing
 
 ### Testing Framework
-
-```typescript
-// jest.config.js
-const nextJest = require('next/jest')
-
-const createJestConfig = nextJest({
-  dir: './',
-})
-
-const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jest-environment-jsdom',
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/$1',
-  },
-  collectCoverageFrom: [
-    'app/**/*.{ts,tsx}',
-    'components/**/*.{ts,tsx}',
-    'lib/**/*.{ts,tsx}',
-    '!**/*.d.ts',
-    '!**/node_modules/**',
-  ],
-}
-
-module.exports = createJestConfig(customJestConfig)
-```
+This repository does not include a preconfigured Jest setup. Add tests as needed.
 
 ### Test Examples
 
@@ -715,75 +605,13 @@ echo $AUTH0_CLIENT_ID
 ## 🚀 Deployment
 
 ### Local Production Build
-
 ```bash
-# Build for production
 npm run build
-
-# Start production server
-npm run start
+npm start
 ```
 
 ### Docker Deployment
-
-#### **Dockerfile**
-
-```dockerfile
-# Dockerfile
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm ci
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN npm run build
-
-# Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
-EXPOSE 3000
-
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-CMD ["node", "server.js"]
-```
+Enterprise containerization is covered in architecture docs. Optional for this repo.
 
 #### **Docker Compose**
 
@@ -824,33 +652,7 @@ volumes:
 ```
 
 ### Environment-Specific Configurations
-
-#### **Development**
-
-```bash
-# .env.development
-NODE_ENV=development
-DATABASE_URL=postgresql://localhost:5432/miv_platform_dev
-REDIS_URL=redis://localhost:6379
-```
-
-#### **Staging**
-
-```bash
-# .env.staging
-NODE_ENV=staging
-DATABASE_URL=postgresql://staging-db:5432/miv_platform_staging
-REDIS_URL=redis://staging-redis:6379
-```
-
-#### **Production**
-
-```bash
-# .env.production
-NODE_ENV=production
-DATABASE_URL=postgresql://prod-db:5432/miv_platform_prod
-REDIS_URL=redis://prod-redis:6379
-```
+Not required for SQLite-based development.
 
 ---
 

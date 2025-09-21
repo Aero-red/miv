@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { calculateGEDSIScore } from "@/lib/gedsi-utils"
+import { calculateGEDSIScore, parseFounderTypes as parseFounderTypesSafe } from "@/lib/gedsi-utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -353,12 +353,12 @@ export default function DealFlowPage() {
         // Map venture stage to deal stage
         const dealStage = mapVentureStageToDealer(venture.stage)
         
-        // Calculate deal size based on funding and stage
+        // Deal size from actual data: fundingRaised, fallback lastValuation
         const dealSize = venture.fundingRaised 
-          ? `$${(venture.fundingRaised / 1000000).toFixed(1)}M`
-          : `$${(Math.random() * 5 + 0.5).toFixed(1)}M`
+          ? `$${(venture.fundingRaised / 1_000_000).toFixed(1)}M`
+          : (venture.lastValuation ? `$${(venture.lastValuation / 1_000_000).toFixed(1)}M` : '$0.0M')
 
-        return {
+        const mapped: Deal = {
           id: venture.id,
           company: venture.name,
           stage: dealStage,
@@ -383,7 +383,10 @@ export default function DealFlowPage() {
             womenLeadership: venture.womenEmpowered || venture.gedsiMetricsSummary?.womenLeadership || 0,
             disabilityInclusive: (venture.disabilityInclusive || venture.gedsiMetricsSummary?.disabilityInclusion || 0) > 0
           }
-        }
+        } as any
+        // Keep raw venture for precise aggregations later
+        ;(mapped as any)._raw = venture
+        return mapped
       })
       
       setDeals(transformedDeals)
@@ -412,9 +415,7 @@ export default function DealFlowPage() {
     // 1. GEDSI Leadership & Governance (25 points max)
     let leadershipScore = 0
     try {
-      const founderTypes = Array.isArray(venture.founderTypes) 
-        ? venture.founderTypes 
-        : JSON.parse(venture.founderTypes || '[]')
+      const founderTypes = parseFounderTypesSafe(venture.founderTypes)
       
       if (founderTypes.includes('women-led')) leadershipScore += 10 // IRIS+ OI.1
       if (founderTypes.includes('disability-inclusive')) leadershipScore += 8 // IRIS+ OI.6
@@ -740,9 +741,7 @@ export default function DealFlowPage() {
 
     // Leadership & Founder Analysis (IRIS+ OI.1, OI.6, OI.11, OI.12, OI.14)
     try {
-      const founderTypes = Array.isArray(venture.founderTypes) 
-        ? venture.founderTypes 
-        : JSON.parse(venture.founderTypes || '[]')
+      const founderTypes = parseFounderTypesSafe(venture.founderTypes)
       
       if (founderTypes.includes("women-led")) {
         keyStrengths.push("👩‍💼 Women-led venture aligns with IRIS+ OI.1 objectives")
@@ -851,10 +850,15 @@ export default function DealFlowPage() {
 
   const totalDeals = deals.length
   const activeDeals = deals.filter(d => d.status === "active").length
-  const totalValue = deals.reduce((sum, deal) => {
-    const value = parseFloat(deal.dealSize.replace(/[^0-9.]/g, ''))
-    return sum + (isNaN(value) ? 0 : value)
+  // Sum actual USD values from raw venture data for consistency
+  const totalValueUsd = deals.reduce((sum, deal) => {
+    const raw = (deal as any)._raw || {}
+    const value = typeof raw.fundingRaised === 'number' && raw.fundingRaised > 0
+      ? raw.fundingRaised
+      : (typeof raw.lastValuation === 'number' && raw.lastValuation > 0 ? raw.lastValuation : 0)
+    return sum + value
   }, 0)
+  const totalValue = totalValueUsd / 1_000_000
   
   // Enhanced metric calculations with proper validation
   const avgGedsiScore = totalDeals > 0 ? 

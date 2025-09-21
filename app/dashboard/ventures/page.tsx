@@ -76,10 +76,18 @@ export default function VenturesPage() {
     const fetchVentures = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/ventures')
+        const response = await fetch('/api/ventures?limit=100', {
+          cache: 'no-cache',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        })
         if (response.ok) {
           const data = await response.json()
-          setVentures(data)
+          setVentures(Array.isArray(data) ? data : (data.ventures || []))
+          console.log('🔍 Loaded ventures count:', Array.isArray(data) ? data.length : (data.ventures || []).length)
         } else {
           // Handle API error
           setError('Failed to fetch ventures from database')

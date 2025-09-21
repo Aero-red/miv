@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
+import { parseFounderTypes } from "@/lib/gedsi-utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -569,13 +570,7 @@ export default function SocialImpactPage() {
           {/* Venture Impact Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredVentures.map((venture) => {
-              const founderTypes = (() => {
-                try {
-                  return JSON.parse(venture.founderTypes || '[]')
-                } catch {
-                  return []
-                }
-              })()
+              const founderTypes = parseFounderTypes(venture.founderTypes)
               
               const ventureMetrics = gedsiMetrics.filter(m => m.ventureId === venture.id)
               const completedMetrics = ventureMetrics.filter(m => m.status === 'VERIFIED' || m.status === 'COMPLETED').length

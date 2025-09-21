@@ -7,6 +7,10 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   DollarSign,
   TrendingUp,
@@ -303,11 +307,86 @@ export default function CapitalFacilitation() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [investorSearchQuery, setInvestorSearchQuery] = useState("")
+  
+  // New request dialog state
+  const [isNewRequestDialogOpen, setIsNewRequestDialogOpen] = useState(false)
+  const [ventures, setVentures] = useState<any[]>([])
+  const [newRequestForm, setNewRequestForm] = useState({
+    ventureId: '',
+    type: 'EQUITY',
+    amount: '',
+    description: '',
+    investorName: '',
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch capital facilitation data from database
   useEffect(() => {
     fetchCapitalData()
+    fetchVentures()
   }, [])
+
+  // Fetch ventures for the new request form
+  const fetchVentures = async () => {
+    try {
+      const response = await fetch('/api/ventures?limit=100')
+      if (response.ok) {
+        const data = await response.json()
+        setVentures(data.ventures || [])
+      }
+    } catch (error) {
+      console.error('Error fetching ventures:', error)
+    }
+  }
+
+  // Handle new request form submission
+  const handleNewRequestSubmit = async () => {
+    if (!newRequestForm.ventureId || !newRequestForm.amount) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/capital-activities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ventureId: newRequestForm.ventureId,
+          type: newRequestForm.type,
+          amount: parseFloat(newRequestForm.amount),
+          description: newRequestForm.description,
+          investorName: newRequestForm.investorName,
+          status: 'PENDING',
+          date: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        // Reset form and close dialog
+        setNewRequestForm({
+          ventureId: '',
+          type: 'EQUITY',
+          amount: '',
+          description: '',
+          investorName: '',
+        })
+        setIsNewRequestDialogOpen(false)
+        // Refresh the data
+        fetchCapitalData()
+        alert('Capital request created successfully!')
+      } else {
+        throw new Error('Failed to create capital request')
+      }
+    } catch (error) {
+      console.error('Error creating capital request:', error)
+      alert('Error creating capital request. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const fetchCapitalData = async () => {
     try {
@@ -466,7 +545,7 @@ export default function CapitalFacilitation() {
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
-                <Button>
+                <Button onClick={() => setIsNewRequestDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   New Request
                 </Button>
@@ -894,6 +973,90 @@ export default function CapitalFacilitation() {
           </>
         )}
       </div>
+
+      {/* New Request Dialog */}
+      <Dialog open={isNewRequestDialogOpen} onOpenChange={setIsNewRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Capital Request</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="venture">Venture *</Label>
+              <Select 
+                value={newRequestForm.ventureId} 
+                onValueChange={(value) => setNewRequestForm(prev => ({ ...prev, ventureId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a venture" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ventures.map((venture) => (
+                    <SelectItem key={venture.id} value={venture.id}>
+                      {venture.name} ({venture.sector})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type">Funding Type *</Label>
+              <Select 
+                value={newRequestForm.type} 
+                onValueChange={(value) => setNewRequestForm(prev => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GRANT">Grant</SelectItem>
+                  <SelectItem value="DEBT">Debt</SelectItem>
+                  <SelectItem value="EQUITY">Equity</SelectItem>
+                  <SelectItem value="CONVERTIBLE_NOTE">Convertible Note</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Amount (USD) *</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="e.g., 500000"
+                value={newRequestForm.amount}
+                onChange={(e) => setNewRequestForm(prev => ({ ...prev, amount: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="investorName">Investor/Fund Name</Label>
+              <Input
+                id="investorName"
+                placeholder="e.g., Impact Ventures Fund"
+                value={newRequestForm.investorName}
+                onChange={(e) => setNewRequestForm(prev => ({ ...prev, investorName: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Brief description of the funding request..."
+                value={newRequestForm.description}
+                onChange={(e) => setNewRequestForm(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleNewRequestSubmit} disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

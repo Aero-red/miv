@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { calculateGEDSIScore, getGEDSIScoreInterpretation, calculateGEDSIComplianceRate } from "@/lib/gedsi-utils"
+import { calculateGEDSIScore, getGEDSIScoreInterpretation, calculateGEDSIComplianceRate, parseFounderTypes } from "@/lib/gedsi-utils"
 import { 
   Building2, 
   Search, 
@@ -249,7 +249,7 @@ export default function PortfolioPage() {
       
       // Founder diversity impact (from database field)
       try {
-        const founderTypes = Array.isArray(venture.founderTypes) ? venture.founderTypes : JSON.parse(venture.founderTypes || '[]')
+        const founderTypes = parseFounderTypes(venture.founderTypes)
         let founderPoints = 0
         if (founderTypes.includes('women-led')) founderPoints += 8
         if (founderTypes.includes('disability-inclusive')) founderPoints += 8
@@ -551,7 +551,7 @@ export default function PortfolioPage() {
     let matchesFounderType = true
     if (selectedFounderType !== "all") {
       try {
-        const founderTypes = JSON.parse(company.founderTypes || '[]')
+        const founderTypes = parseFounderTypes(company.founderTypes)
         matchesFounderType = founderTypes.includes(selectedFounderType)
       } catch (e) {
         matchesFounderType = false
@@ -911,13 +911,7 @@ export default function PortfolioPage() {
               </div>
             ) : (
               filteredCompanies.map((company) => {
-                const founderTypes = (() => {
-                  try {
-                    return JSON.parse(company.founderTypes || '[]')
-                  } catch {
-                    return []
-                  }
-                })()
+                const founderTypes = parseFounderTypes(company.founderTypes)
 
                 return (
                   <Card key={company.id} className="cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500" onClick={() => handleViewCompany(company)}>
@@ -1146,7 +1140,7 @@ export default function PortfolioPage() {
                     <div className="text-center py-8">
                       <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">No GEDSI metrics recorded yet</p>
-                      <Button size="sm" className="mt-2">Add GEDSI Metrics</Button>
+                      <Button size="sm" className="mt-2" onClick={() => setIsActionDialogOpen(true)}>Add GEDSI Metrics</Button>
                     </div>
                   )}
             </CardContent>

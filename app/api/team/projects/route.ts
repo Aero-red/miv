@@ -1,114 +1,90 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+import { getUserContext, createDataAccessFilter } from '@/lib/user-context'
+import { z } from 'zod'
 
-// Validation schemas
+// Validation schema for projects
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
   description: z.string().optional(),
   status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED']).default('NOT_STARTED'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
-  dueDate: z.string().optional(), // ISO date string
-  startDate: z.string().optional(), // ISO date string
+  dueDate: z.string().optional(),
+  startDate: z.string().optional(),
   budget: z.number().optional(),
-  tags: z.array(z.string()).optional(),
-  leadId: z.string().min(1, 'Project lead is required'),
-  memberIds: z.array(z.string()).optional(),
   ventureId: z.string().optional(),
-});
+  leadId: z.string().min(1, 'Project lead is required'),
+  memberIds: z.array(z.string()).optional().default([]),
+})
 
-const updateProjectSchema = createProjectSchema.partial();
+const updateProjectSchema = createProjectSchema.partial()
 
-// GET /api/team/projects - Get all projects
+// GET /api/team/projects - List projects
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || '';
-    const priority = searchParams.get('priority') || '';
-    const leadId = searchParams.get('leadId') || '';
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const page = parseInt(searchParams.get('page') || '1');
-    const skip = (page - 1) * limit;
+    // Get user context for data access control
+    const userContext = await getUserContext()
+    if (!userContext) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    const where: any = {};
-    
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const search = searchParams.get('search') || ''
+    const status = searchParams.get('status') || ''
+    const priority = searchParams.get('priority') || ''
+
+    const skip = (page - 1) * limit
+
+    // Create data access filter based on user context
+    const dataAccessFilter = createDataAccessFilter(userContext)
+    const baseWhere = dataAccessFilter.projects
+
+    // Build where clause with user access control
+    const where: any = {
+      AND: [baseWhere]
+    }
+
+    // Add search filters
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ]
+      })
     }
-    
-    if (status) {
-      where.status = status;
-    }
-    
-    if (priority) {
-      where.priority = priority;
-    }
-    
-    if (leadId) {
-      where.leadId = leadId;
-    }
+    if (status) where.AND.push({ status })
+    if (priority) where.AND.push({ priority })
 
     const [projects, total] = await Promise.all([
       prisma.project.findMany({
         where,
         include: {
           lead: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-            }
+            select: { id: true, name: true, email: true }
           },
           members: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-            }
-          },
-          tasks: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-              priority: true,
-              dueDate: true,
-              assignedTo: {
-                select: {
-                  id: true,
-                  name: true,
-                }
-              }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 5 // Latest 5 tasks
+            select: { id: true, name: true, email: true }
           },
           venture: {
-            select: {
-              id: true,
-              name: true,
-              sector: true,
-            }
+            select: { id: true, name: true, sector: true }
+          },
+          tasks: {
+            select: { id: true, name: true, status: true, priority: true, dueDate: true }
           },
           _count: {
-            select: {
-              tasks: true,
-              members: true,
-            }
+            select: { tasks: true, members: true }
           }
         },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         skip,
-        take: limit
+        take: limit,
       }),
       prisma.project.count({ where })
-    ]);
+    ])
 
     return NextResponse.json({
       projects,
@@ -118,126 +94,86 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit)
       }
-    });
-
+    })
   } catch (error) {
-    console.error('Error fetching projects:', error);
+    console.error('Error fetching projects:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
 // POST /api/team/projects - Create new project
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validatedData = createProjectSchema.parse(body);
-
-    // Verify lead exists
-    const lead = await prisma.user.findUnique({
-      where: { id: validatedData.leadId }
-    });
-
-    if (!lead) {
-      return NextResponse.json(
-        { error: 'Project lead not found' },
-        { status: 400 }
-      );
+    // Get user context and check permissions
+    const userContext = await getUserContext()
+    if (!userContext) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify all members exist
-    if (validatedData.memberIds && validatedData.memberIds.length > 0) {
-      const members = await prisma.user.findMany({
-        where: { id: { in: validatedData.memberIds } }
-      });
+    const body = await request.json()
+    const validatedData = createProjectSchema.parse(body)
 
-      if (members.length !== validatedData.memberIds.length) {
-        return NextResponse.json(
-          { error: 'One or more team members not found' },
-          { status: 400 }
-        );
-      }
-    }
+    // Extract member IDs for connection
+    const { memberIds, ...projectData } = validatedData
 
-    // Verify venture exists if provided
-    if (validatedData.ventureId) {
-      const venture = await prisma.venture.findUnique({
-        where: { id: validatedData.ventureId }
-      });
-
-      if (!venture) {
-        return NextResponse.json(
-          { error: 'Venture not found' },
-          { status: 400 }
-        );
-      }
-    }
-
+    // Create project
     const project = await prisma.project.create({
       data: {
-        name: validatedData.name,
-        description: validatedData.description,
-        status: validatedData.status,
-        priority: validatedData.priority,
-        dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
-        startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
-        budget: validatedData.budget,
-        tags: validatedData.tags || [],
-        leadId: validatedData.leadId,
-        ventureId: validatedData.ventureId,
-        members: validatedData.memberIds ? {
-          connect: validatedData.memberIds.map(id => ({ id }))
-        } : undefined,
+        ...projectData,
+        dueDate: projectData.dueDate ? new Date(projectData.dueDate) : null,
+        startDate: projectData.startDate ? new Date(projectData.startDate) : null,
+        members: {
+          connect: memberIds.map(id => ({ id }))
+        }
       },
       include: {
         lead: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          }
+          select: { id: true, name: true, email: true }
         },
         members: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          }
+          select: { id: true, name: true, email: true }
         },
         venture: {
-          select: {
-            id: true,
-            name: true,
-            sector: true,
-          }
+          select: { id: true, name: true, sector: true }
+        },
+        tasks: {
+          select: { id: true, name: true, status: true, priority: true, dueDate: true }
         },
         _count: {
-          select: {
-            tasks: true,
-            members: true,
-          }
+          select: { tasks: true, members: true }
         }
       }
-    });
+    })
 
-    return NextResponse.json(project, { status: 201 });
+    // Create activity log
+    await prisma.activity.create({
+      data: {
+        userId: userContext.user.id,
+        type: 'NOTE_ADDED',
+        title: 'Project Created',
+        description: `New project "${project.name}" was created`,
+        metadata: {
+          projectId: project.id,
+          type: 'project_created'
+        }
+      }
+    })
 
+    return NextResponse.json(project, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation failed', details: error.errors },
         { status: 400 }
-      );
+      )
     }
-
-    console.error('Error creating project:', error);
+    console.error('Error creating project:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }

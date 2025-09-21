@@ -634,7 +634,7 @@ export default function FundManagementPage() {
     const amount = parseFloat(fund.distributedCapital.replace(/[^0-9.]/g, ''))
     return sum + amount
   }, 0)
-  const averageIRR = funds.length > 0 ? funds.reduce((sum, fund) => sum + fund.irr, 0) / totalFunds : 0
+  const averageIRR = funds.length > 0 ? funds.reduce((sum, fund) => sum + (fund.irr || 0), 0) / totalFunds : 0
 
   if (loading) {
   return (
@@ -1536,8 +1536,9 @@ export default function FundManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredFunds.map((fund) => {
-                    const calledPercentage = (parseFloat(fund.calledCapital.replace(/[^0-9.]/g, '')) / 
-                                             parseFloat(fund.committedCapital.replace(/[^0-9.]/g, ''))) * 100
+                    const calledAmount = parseFloat(fund.calledCapital.replace(/[^0-9.]/g, '')) || 0
+                    const committedAmount = parseFloat(fund.committedCapital.replace(/[^0-9.]/g, '')) || 1
+                    const calledPercentage = (calledAmount / committedAmount) * 100
                     
                     return (
                       <TableRow key={fund.id}>
@@ -1631,7 +1632,7 @@ export default function FundManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {capitalCalls.map((call) => {
-                    const responseRate = (call.lpsResponded / call.totalLps) * 100
+                    const responseRate = call.totalLps > 0 ? (call.lpsResponded / call.totalLps) * 100 : 0
                     
                     return (
                       <TableRow key={call.id}>
@@ -1705,7 +1706,7 @@ export default function FundManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {distributions.map((dist) => {
-                    const paymentRate = (dist.lpsPaid / dist.totalLps) * 100
+                    const paymentRate = dist.totalLps > 0 ? (dist.lpsPaid / dist.totalLps) * 100 : 0
                     
                     return (
                       <TableRow key={dist.id}>
@@ -1794,16 +1795,19 @@ export default function FundManagementPage() {
                   <h4 className="font-medium">Capital Efficiency</h4>
                   {funds
                     .sort((a, b) => {
-                      const aEfficiency = parseFloat(a.distributedCapital.replace(/[^0-9.]/g, '')) / 
-                                         parseFloat(a.calledCapital.replace(/[^0-9.]/g, ''))
-                      const bEfficiency = parseFloat(b.distributedCapital.replace(/[^0-9.]/g, '')) / 
-                                         parseFloat(b.calledCapital.replace(/[^0-9.]/g, ''))
+                      const aDistributed = parseFloat(a.distributedCapital.replace(/[^0-9.]/g, '')) || 0
+                      const aCalled = parseFloat(a.calledCapital.replace(/[^0-9.]/g, '')) || 1
+                      const aEfficiency = aDistributed / aCalled
+                      const bDistributed = parseFloat(b.distributedCapital.replace(/[^0-9.]/g, '')) || 0
+                      const bCalled = parseFloat(b.calledCapital.replace(/[^0-9.]/g, '')) || 1
+                      const bEfficiency = bDistributed / bCalled
                       return bEfficiency - aEfficiency
                     })
                     .slice(0, 3)
                     .map((fund) => {
-                      const efficiency = parseFloat(fund.distributedCapital.replace(/[^0-9.]/g, '')) / 
-                                       parseFloat(fund.calledCapital.replace(/[^0-9.]/g, ''))
+                      const distributedAmount = parseFloat(fund.distributedCapital.replace(/[^0-9.]/g, '')) || 0
+                      const calledAmount = parseFloat(fund.calledCapital.replace(/[^0-9.]/g, '')) || 1
+                      const efficiency = distributedAmount / calledAmount
                       return (
                         <div key={fund.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <span className="font-medium">{fund.name}</span>
@@ -1848,7 +1852,7 @@ export default function FundManagementPage() {
                     <div className="text-right">
                       <div className="font-medium">{lp.commitment}</div>
                       <div className="text-sm text-muted-foreground">
-                        {lp.irr.toFixed(1)}% IRR
+                        {lp.irr ? lp.irr.toFixed(1) : '0.0'}% IRR
                       </div>
                     </div>
                   </div>
@@ -1904,12 +1908,12 @@ export default function FundManagementPage() {
                         <TableCell>{lp.distributed}</TableCell>
                         <TableCell>{lp.nav}</TableCell>
                         <TableCell>
-                          <span className={`font-medium ${lp.irr > 15 ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {lp.irr.toFixed(1)}%
+                          <span className={`font-medium ${(lp.irr || 0) > 15 ? 'text-green-600' : 'text-yellow-600'}`}>
+                            {lp.irr ? lp.irr.toFixed(1) : '0.0'}%
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className="font-medium">{lp.tvpi.toFixed(2)}x</span>
+                          <span className="font-medium">{lp.tvpi ? lp.tvpi.toFixed(2) : '0.00'}x</span>
                         </TableCell>
                         <TableCell>
                           <Badge variant={lp.kycStatus === 'approved' ? 'default' : 'secondary'} className={lp.kycStatus === 'approved' ? 'bg-green-100 text-green-800' : ''}>
@@ -1962,7 +1966,7 @@ export default function FundManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {capitalCalls.map((call) => {
-                    const responseRate = (call.lpsResponded / call.totalLps) * 100
+                    const responseRate = call.totalLps > 0 ? (call.lpsResponded / call.totalLps) * 100 : 0
                     
                     return (
                       <TableRow key={call.id}>
@@ -2039,7 +2043,7 @@ export default function FundManagementPage() {
               <CardContent>
                 <div className="space-y-4">
                   {capitalCalls.map((call) => {
-                    const responseRate = (call.lpsResponded / call.totalLps) * 100
+                    const responseRate = call.totalLps > 0 ? (call.lpsResponded / call.totalLps) * 100 : 0
                     return (
                       <div key={call.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -2115,7 +2119,7 @@ export default function FundManagementPage() {
               <CardContent>
                 <div className="space-y-4">
                   {distributions.map((dist) => {
-                    const paymentRate = (dist.lpsPaid / dist.totalLps) * 100
+                    const paymentRate = dist.totalLps > 0 ? (dist.lpsPaid / dist.totalLps) * 100 : 0
                     return (
                       <div key={dist.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -2496,17 +2500,17 @@ export default function FundManagementPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>IRR:</span>
-                      <span className={`font-medium ${selectedLP.irr > 15 ? 'text-green-600' : 'text-yellow-600'}`}>
-                        {selectedLP.irr.toFixed(1)}%
+                      <span className={`font-medium ${(selectedLP.irr || 0) > 15 ? 'text-green-600' : 'text-yellow-600'}`}>
+                        {selectedLP.irr ? selectedLP.irr.toFixed(1) : '0.0'}%
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>TVPI:</span>
-                      <span className="font-medium">{selectedLP.tvpi.toFixed(2)}x</span>
+                      <span className="font-medium">{selectedLP.tvpi ? selectedLP.tvpi.toFixed(2) : '0.00'}x</span>
                     </div>
                     <div className="flex justify-between">
                       <span>DPI:</span>
-                      <span className="font-medium">{selectedLP.dpi.toFixed(2)}x</span>
+                      <span className="font-medium">{selectedLP.dpi ? selectedLP.dpi.toFixed(2) : '0.00'}x</span>
                     </div>
                   </div>
                 </div>

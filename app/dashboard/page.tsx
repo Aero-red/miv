@@ -117,15 +117,29 @@ export default function EnterpriseDashboard() {
           fetch('/api/users?limit=100')
         ])
 
-        if (!venturesRes.ok || !gedsiRes.ok || !irisRes.ok || !usersRes.ok) {
-          throw new Error('Failed to fetch dashboard data')
+        // Check individual responses and handle them gracefully
+        const errors = []
+        if (!venturesRes.ok) errors.push(`Ventures API: ${venturesRes.status}`)
+        if (!gedsiRes.ok) errors.push(`GEDSI API: ${gedsiRes.status}`)
+        if (!irisRes.ok) errors.push(`IRIS API: ${irisRes.status}`)
+        if (!usersRes.ok) errors.push(`Users API: ${usersRes.status}`)
+        
+        // Only throw error if all APIs fail
+        if (errors.length === 4) {
+          throw new Error(`All APIs failed: ${errors.join(', ')}`)
+        }
+        
+        // Log warnings for partial failures but continue
+        if (errors.length > 0) {
+          console.warn('Some APIs failed:', errors.join(', '))
         }
 
+        // Parse JSON responses safely, using empty arrays as fallbacks
         const [venturesData, gedsiData, irisData, usersData] = await Promise.all([
-          venturesRes.json(),
-          gedsiRes.json(),
-          irisRes.json(),
-          usersRes.json()
+          venturesRes.ok ? venturesRes.json().catch(() => ({ ventures: [] })) : { ventures: [] },
+          gedsiRes.ok ? gedsiRes.json().catch(() => ({ metrics: [] })) : { metrics: [] },
+          irisRes.ok ? irisRes.json().catch(() => ({ results: [] })) : { results: [] },
+          usersRes.ok ? usersRes.json().catch(() => ({ users: [] })) : { users: [] }
         ])
 
         setVentures(venturesData.ventures || [])
@@ -135,12 +149,20 @@ export default function EnterpriseDashboard() {
 
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
-        addToast({
-          type: "error",
-          title: "Data Loading Error",
-          description: "Failed to load dashboard data. Using sample data instead."
-        })
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load dashboard data'
+        setError(errorMessage)
+        
+        // Only show error toast if it's a critical failure (all APIs failed)
+        if (errorMessage.includes('All APIs failed')) {
+          addToast({
+            type: "error",
+            title: "Data Loading Error", 
+            description: "All data sources are currently unavailable. Please try refreshing the page."
+          })
+        } else {
+          // For partial failures, just log and continue
+          console.warn('Dashboard loaded with some data unavailable:', errorMessage)
+        }
       } finally {
         setLoading(false)
       }
@@ -415,11 +437,11 @@ export default function EnterpriseDashboard() {
     const normalizedCounts: Record<string, number> = {}
     Object.entries(pipelineFlow).forEach(([key, val]) => {
       const k = key.includes('DIAG') ? 'DIAGNOSTICS' : key
-      normalizedCounts[k] = (normalizedCounts[k] || 0) + val
+      normalizedCounts[k] = (normalizedCounts[k] || 0) + (val as number)
     })
 
     const uniqueStages = Array.from(new Set([...stageOrder, ...Object.keys(normalizedCounts)]))
-    const uniqueStatuses = Array.from(new Set(Object.values(statusByStage).flatMap(s => Object.keys(s))))
+    const uniqueStatuses = Array.from(new Set(Object.values(statusByStage).flatMap(s => Object.keys(s as Record<string, number>))))
 
     const pipelineData = uniqueStages
       .filter(stage => normalizedCounts[stage] != null)
@@ -458,12 +480,12 @@ export default function EnterpriseDashboard() {
 
     const regionalChartData = Object.entries(regionalData).map(([region, value]) => ({
       region,
-      value,
+      value: value as number,
       totalFunding: 0,
       avgFunding: 0,
       stageCount: 0,
       sectorCount: 0,
-      percentage: Math.round((value / filteredVentures.length) * 100)
+      percentage: Math.round(((value as number) / filteredVentures.length) * 100)
     }))
 
     // Ensure we have at least some data for regional chart
@@ -888,13 +910,19 @@ export default function EnterpriseDashboard() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {error && (
+            {error && error.includes('All APIs failed') && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-center">
                   <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
                   <div>
                     <h3 className="text-sm font-medium text-red-800">Data Loading Error</h3>
                     <p className="text-sm text-red-600 mt-1">{error}</p>
+                    <button 
+                      onClick={fetchDashboardData}
+                      className="mt-2 text-sm text-red-700 underline hover:text-red-900"
+                    >
+                      Try again
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1096,7 +1124,7 @@ export default function EnterpriseDashboard() {
                           }, {} as Record<string, number>)).map(([stage, count]) => (
                             <div key={stage} className="flex justify-between text-sm">
                               <span>{stage.replace('_', ' ')}</span>
-                              <span className="font-medium">{count}</span>
+                              <span className="font-medium">{count as number}</span>
                             </div>
                           ))}
                         </div>
@@ -1356,7 +1384,11 @@ export default function EnterpriseDashboard() {
           <TabsContent value="workflows" className="space-y-6">
             <WorkflowDashboardTab 
               loading={loading}
-              addToast={addToast}
+              addToast={(toast) => addToast({
+                type: toast.type as "success" | "error" | "info" | "warning",
+                title: toast.title,
+                description: toast.description
+              })}
             />
           </TabsContent>
         </Tabs>

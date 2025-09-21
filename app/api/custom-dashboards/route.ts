@@ -1,166 +1,165 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
 
-// GET /api/custom-dashboards - Get custom dashboards (simulated from user data)
+// Validation schema for custom dashboards
+const createDashboardSchema = z.object({
+  name: z.string().min(1, 'Dashboard name is required'),
+  description: z.string().optional(),
+  category: z.string().min(1, 'Category is required'),
+  widgets: z.object({
+    layout: z.array(z.any()).optional().default([]),
+    theme: z.string().optional().default('light'),
+    refreshInterval: z.number().optional().default(60),
+  }).default({}),
+  isPublic: z.boolean().default(false),
+  isFavorite: z.boolean().default(false),
+  tags: z.array(z.string()).optional().default([]),
+  sharedWithIds: z.array(z.string()).optional().default([]),
+})
+
+const updateDashboardSchema = createDashboardSchema.partial()
+
+// GET /api/custom-dashboards - List custom dashboards
 export async function GET(request: NextRequest) {
   try {
-    // For now, we'll simulate custom dashboards based on existing data
-    // In a real system, these would be stored in a separate table
-    
-    // Fetch users to simulate dashboard creators
-    const users = await prisma.user.findMany({
-      select: { name: true, email: true, id: true },
-      take: 10
-    });
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const search = searchParams.get('search') || ''
+    const category = searchParams.get('category') || ''
+    const isPublic = searchParams.get('isPublic')
+    const isFavorite = searchParams.get('isFavorite')
 
-    // Fetch ventures to calculate dashboard metrics
-    const ventures = await prisma.venture.findMany({
-      include: {
-        gedsiMetrics: true,
-        capitalActivities: true,
-        _count: {
-          select: {
-            documents: true,
-            activities: true,
+    const skip = (page - 1) * limit
+
+    // Build where clause
+    const where: any = {}
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+    if (category && category !== 'all') where.category = category
+    if (isPublic !== null && isPublic !== undefined) {
+      where.isPublic = isPublic === 'true'
+    }
+    if (isFavorite !== null && isFavorite !== undefined) {
+      where.isFavorite = isFavorite === 'true'
+    }
+
+    const [dashboards, total] = await Promise.all([
+      prisma.customDashboard.findMany({
+        where,
+        include: {
+          createdBy: {
+            select: { id: true, name: true, email: true }
+          },
+          sharedWith: {
+            select: { id: true, name: true, email: true }
           }
-        }
-      }
-    });
-
-    // Create simulated custom dashboards based on real data
-    const dashboards = [
-      {
-        id: "DASH-001",
-        name: "Pipeline Overview",
-        description: "Comprehensive view of deal pipeline and performance metrics",
-        category: "Pipeline",
-        widgets: Math.min(ventures.length, 8),
-        lastModified: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-        isPublic: true,
-        isFavorite: true,
-        createdBy: users[0]?.name || "System User",
-        createdById: users[0]?.id || "system",
-        data: {
-          totalVentures: ventures.length,
-          activeDeals: ventures.filter(v => v.stage === 'DUE_DILIGENCE' || v.stage === 'INVESTMENT_READY').length,
-          fundedVentures: ventures.filter(v => v.stage === 'FUNDED' || v.fundingRaised > 0).length
-        }
-      },
-      {
-        id: "DASH-002", 
-        name: "Portfolio Performance",
-        description: "Real-time portfolio performance and IRR tracking",
-        category: "Portfolio",
-        widgets: Math.min(ventures.filter(v => v.fundingRaised > 0).length, 12),
-        lastModified: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-        isPublic: false,
-        isFavorite: false,
-        createdBy: users[1]?.name || "Portfolio Manager",
-        createdById: users[1]?.id || "system",
-        data: {
-          portfolioVentures: ventures.filter(v => v.fundingRaised > 0).length,
-          totalFunding: ventures.reduce((sum, v) => sum + (v.fundingRaised || 0), 0),
-          avgGedsiScore: ventures.filter(v => v.gedsiMetrics.length > 0)
-            .reduce((sum, v) => sum + (v.gedsiMetrics.reduce((s, m) => s + m.currentValue, 0) / v.gedsiMetrics.length), 0) / 
-            Math.max(ventures.filter(v => v.gedsiMetrics.length > 0).length, 1)
-        }
-      },
-      {
-        id: "DASH-003",
-        name: "GEDSI Impact Tracker", 
-        description: "Gender equality, diversity, and social inclusion metrics",
-        category: "Impact",
-        widgets: Math.min(ventures.filter(v => v.gedsiMetrics.length > 0).length, 6),
-        lastModified: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-        isPublic: true,
-        isFavorite: true,
-        createdBy: users[2]?.name || "Impact Analyst",
-        createdById: users[2]?.id || "system",
-        data: {
-          totalMetrics: ventures.reduce((sum, v) => sum + v.gedsiMetrics.length, 0),
-          verifiedMetrics: ventures.reduce((sum, v) => sum + v.gedsiMetrics.filter(m => m.status === 'VERIFIED').length, 0),
-          avgCompletionRate: ventures.filter(v => v.gedsiMetrics.length > 0)
-            .reduce((sum, v) => sum + (v.gedsiMetrics.filter(m => m.status === 'COMPLETED').length / v.gedsiMetrics.length * 100), 0) /
-            Math.max(ventures.filter(v => v.gedsiMetrics.length > 0).length, 1)
-        }
-      },
-      {
-        id: "DASH-004",
-        name: "Due Diligence Status",
-        description: "Track due diligence progress across all active deals", 
-        category: "Operations",
-        widgets: Math.min(ventures.filter(v => v.stage === 'DUE_DILIGENCE').length * 2, 10),
-        lastModified: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
-        isPublic: false,
-        isFavorite: false,
-        createdBy: users[3]?.name || "Operations Manager",
-        createdById: users[3]?.id || "system",
-        data: {
-          inDueDiligence: ventures.filter(v => v.stage === 'DUE_DILIGENCE').length,
-          documentsUploaded: ventures.reduce((sum, v) => sum + (v._count?.documents || 0), 0),
-          activitiesLogged: ventures.reduce((sum, v) => sum + (v._count?.activities || 0), 0)
-        }
-      },
-      {
-        id: "DASH-005",
-        name: "Team Performance",
-        description: "Team productivity and deal flow metrics",
-        category: "Team", 
-        widgets: Math.min(users.length + 2, 7),
-        lastModified: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks ago
-        isPublic: true,
-        isFavorite: false,
-        createdBy: users[4]?.name || "Team Lead",
-        createdById: users[4]?.id || "system",
-        data: {
-          totalUsers: users.length,
-          activeVentures: ventures.filter(v => v.assignedToId).length,
-          unassignedVentures: ventures.filter(v => !v.assignedToId).length
-        }
-      }
-    ].filter(dashboard => dashboard.widgets > 0); // Only include dashboards with widgets
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.customDashboard.count({ where })
+    ])
 
     return NextResponse.json({
       dashboards,
-      summary: {
-        totalDashboards: dashboards.length,
-        publicDashboards: dashboards.filter(d => d.isPublic).length,
-        favoriteDashboards: dashboards.filter(d => d.isFavorite).length,
-        lastUpdated: new Date().toISOString()
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
       }
-    });
+    })
   } catch (error) {
-    console.error('Error fetching custom dashboards:', error);
+    console.error('Error fetching custom dashboards:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
-// POST /api/custom-dashboards - Create a new custom dashboard (placeholder)
+// POST /api/custom-dashboards - Create new custom dashboard
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    
-    // In a real implementation, this would save to a dashboards table
-    // For now, we'll just return a success response
-    const newDashboard = {
-      id: `DASH-${Date.now()}`,
-      ...body,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: "Current User", // Would get from session
-      widgets: 0 // Start with no widgets
-    };
+    // Disable authentication for development
+    // const session = await getServerSession()
+    // if (!session?.user) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
 
-    return NextResponse.json({ dashboard: newDashboard }, { status: 201 });
+    const body = await request.json()
+    const validatedData = createDashboardSchema.parse(body)
+
+    // Get user ID from session (for development, use first user)
+    let user = await prisma.user.findFirst()
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          name: 'Development User',
+          email: 'dev@miv.com',
+          role: 'ADMIN'
+        }
+      })
+    }
+
+    // Extract shared user IDs for connection
+    const { sharedWithIds, ...dashboardData } = validatedData
+
+    // Create dashboard
+    const dashboard = await prisma.customDashboard.create({
+      data: {
+        ...dashboardData,
+        createdById: user.id,
+        sharedWith: {
+          connect: sharedWithIds.map(id => ({ id }))
+        }
+      },
+      include: {
+        createdBy: {
+          select: { id: true, name: true, email: true }
+        },
+        sharedWith: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    })
+
+    // Create activity log
+    await prisma.activity.create({
+      data: {
+        userId: user.id,
+        type: 'NOTE_ADDED',
+        title: 'Custom Dashboard Created',
+        description: `New custom dashboard "${dashboard.name}" was created in category "${dashboard.category}"`,
+        metadata: {
+          dashboardId: dashboard.id,
+          type: 'dashboard_created',
+          category: dashboard.category,
+          isPublic: dashboard.isPublic
+        }
+      }
+    })
+
+    return NextResponse.json(dashboard, { status: 201 })
   } catch (error) {
-    console.error('Error creating custom dashboard:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      )
+    }
+    console.error('Error creating dashboard:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }

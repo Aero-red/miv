@@ -1,72 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
 
-// Validation schemas
+// Validation schema for team events
 const createEventSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  title: z.string().min(1, 'Event title is required'),
   description: z.string().optional(),
-  date: z.string().min(1, 'Date is required'), // ISO date string
+  date: z.string().min(1, 'Event date is required'),
   time: z.string().optional(),
   location: z.string().optional(),
   isAllDay: z.boolean().default(false),
   isRecurring: z.boolean().default(false),
   recurrence: z.object({
-    frequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
-    interval: z.number().min(1).optional(),
-    endDate: z.string().optional(),
-    count: z.number().min(1).optional(),
+    frequency: z.string(),
+    interval: z.number(),
+    daysOfWeek: z.array(z.number()).optional(),
   }).optional(),
-  organizerId: z.string().min(1, 'Organizer is required'),
-  attendeeIds: z.array(z.string()).optional(),
-});
+  attendeeIds: z.array(z.string()).optional().default([]),
+})
 
-const updateEventSchema = createEventSchema.partial();
+const updateEventSchema = createEventSchema.partial()
 
-// GET /api/team/events - Get all events
+// GET /api/team/events - List team events
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
-    const organizerId = searchParams.get('organizerId') || '';
-    const attendeeId = searchParams.get('attendeeId') || '';
-    const startDate = searchParams.get('startDate'); // Filter events from this date
-    const endDate = searchParams.get('endDate'); // Filter events to this date
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const page = parseInt(searchParams.get('page') || '1');
-    const skip = (page - 1) * limit;
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const search = searchParams.get('search') || ''
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
 
-    const where: any = {};
-    
+    const skip = (page - 1) * limit
+
+    // Build where clause
+    const where: any = {}
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { location: { contains: search, mode: 'insensitive' } },
-      ];
+      ]
     }
-    
-    if (organizerId) {
-      where.organizerId = organizerId;
-    }
-    
-    if (attendeeId) {
-      where.attendees = {
-        some: {
-          id: attendeeId
-        }
-      };
-    }
-
-    // Date range filtering
-    if (startDate || endDate) {
-      where.date = {};
-      if (startDate) {
-        where.date.gte = new Date(startDate);
+    if (startDate && endDate) {
+      where.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
       }
-      if (endDate) {
-        where.date.lte = new Date(endDate);
-      }
+    } else if (startDate) {
+      where.date = { gte: new Date(startDate) }
+    } else if (endDate) {
+      where.date = { lte: new Date(endDate) }
     }
 
     const [events, total] = await Promise.all([
@@ -74,35 +59,21 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           organizer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              image: true,
-            }
+            select: { id: true, name: true, email: true }
           },
           attendees: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              image: true,
-            }
+            select: { id: true, name: true, email: true }
           },
           _count: {
-            select: {
-              attendees: true,
-            }
+            select: { attendees: true }
           }
         },
         orderBy: { date: 'asc' },
         skip,
-        take: limit
+        take: limit,
       }),
       prisma.teamEvent.count({ where })
-    ]);
+    ])
 
     return NextResponse.json({
       events,
@@ -112,105 +83,93 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit)
       }
-    });
-
+    })
   } catch (error) {
-    console.error('Error fetching events:', error);
+    console.error('Error fetching events:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
-// POST /api/team/events - Create new event
+// POST /api/team/events - Create new team event
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validatedData = createEventSchema.parse(body);
+    // Disable authentication for development
+    // const session = await getServerSession()
+    // if (!session?.user) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
 
-    // Verify organizer exists
-    const organizer = await prisma.user.findUnique({
-      where: { id: validatedData.organizerId }
-    });
+    const body = await request.json()
+    const validatedData = createEventSchema.parse(body)
 
-    if (!organizer) {
-      return NextResponse.json(
-        { error: 'Organizer not found' },
-        { status: 400 }
-      );
+    // Get user ID from session (for development, use first user)
+    let user = await prisma.user.findFirst()
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          name: 'Development User',
+          email: 'dev@miv.com',
+          role: 'ADMIN'
+        }
+      })
     }
 
-    // Verify all attendees exist
-    if (validatedData.attendeeIds && validatedData.attendeeIds.length > 0) {
-      const attendees = await prisma.user.findMany({
-        where: { id: { in: validatedData.attendeeIds } }
-      });
+    // Extract attendee IDs for connection
+    const { attendeeIds, ...eventData } = validatedData
 
-      if (attendees.length !== validatedData.attendeeIds.length) {
-        return NextResponse.json(
-          { error: 'One or more attendees not found' },
-          { status: 400 }
-        );
-      }
-    }
-
+    // Create event
     const event = await prisma.teamEvent.create({
       data: {
-        title: validatedData.title,
-        description: validatedData.description,
-        date: new Date(validatedData.date),
-        time: validatedData.time,
-        location: validatedData.location,
-        isAllDay: validatedData.isAllDay,
-        isRecurring: validatedData.isRecurring,
-        recurrence: validatedData.recurrence || null,
-        organizerId: validatedData.organizerId,
-        attendees: validatedData.attendeeIds ? {
-          connect: validatedData.attendeeIds.map(id => ({ id }))
-        } : undefined,
+        ...eventData,
+        date: new Date(eventData.date),
+        organizerId: user.id,
+        attendees: {
+          connect: attendeeIds.map(id => ({ id }))
+        }
       },
       include: {
         organizer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            image: true,
-          }
+          select: { id: true, name: true, email: true }
         },
         attendees: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            image: true,
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            attendees: true,
-          }
+          select: { attendees: true }
         }
       }
-    });
+    })
 
-    return NextResponse.json(event, { status: 201 });
+    // Create activity log
+    await prisma.activity.create({
+      data: {
+        userId: user.id,
+        type: 'NOTE_ADDED',
+        title: 'Team Event Created',
+        description: `New team event "${event.title}" was scheduled for ${event.date.toLocaleDateString()}`,
+        metadata: {
+          eventId: event.id,
+          type: 'event_created',
+          attendeeCount: attendeeIds.length
+        }
+      }
+    })
 
+    return NextResponse.json(event, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation failed', details: error.errors },
         { status: 400 }
-      );
+      )
     }
-
-    console.error('Error creating event:', error);
+    console.error('Error creating event:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }

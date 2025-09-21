@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -95,6 +96,7 @@ const documentTypes = [
 // Ventures will be loaded from API
 
 export default function DocumentsPage() {
+  const { data: session, status } = useSession()
   const [documents, setDocuments] = useState<Document[]>([])
   const [ventures, setVentures] = useState<{value: string, label: string}[]>([{value: "all", label: "All Ventures"}])
   const [loading, setLoading] = useState(true)
@@ -122,11 +124,26 @@ export default function DocumentsPage() {
       setLoading(true)
       setError(null)
       
-      // Load ventures and documents in parallel
+      // Load ventures and documents in parallel (with cache busting)
+      const timestamp = new Date().getTime()
       const [venturesResponse, documentsResponse, analyticsResponse] = await Promise.all([
-        fetch('/api/ventures?limit=100'),
+        fetch(`/api/ventures?limit=100&_t=${timestamp}`, {
+          cache: 'no-cache',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        }),
         fetchDocuments(),
-        fetch('/api/documents/analytics?period=30')
+        fetch(`/api/documents/analytics?period=30&_t=${timestamp}`, {
+          cache: 'no-cache',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        })
       ])
       
       // Load ventures for dropdown
@@ -166,7 +183,14 @@ export default function DocumentsPage() {
       params.append('sortBy', 'uploadedAt')
       params.append('sortOrder', 'desc')
       
-      const response = await fetch(`/api/documents?${params}`)
+      params.append('_t', new Date().getTime().toString())
+      const response = await fetch(`/api/documents?${params}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
       if (!response.ok) {
         throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`)
       }
@@ -388,6 +412,14 @@ export default function DocumentsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Document Management</h1>
           <p className="text-gray-600">Upload, organize, and manage venture documents</p>
+          {session?.user && (
+            <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+              <span>Signed in as: <strong>{session.user.name || session.user.email}</strong></span>
+              {(session.user as any).organization && (
+                <span>• Organization: <strong>{(session.user as any).organization}</strong></span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button onClick={() => document.getElementById('file-upload')?.click()} disabled={uploading}>

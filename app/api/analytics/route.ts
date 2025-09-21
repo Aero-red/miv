@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CalculationService } from '@/lib/calculation-service'
+import { getUserContext, createDataAccessFilter } from '@/lib/user-context'
 
 export async function GET(request: NextRequest) {
   try {
+    // Get user context and check permissions
+    const userContext = await getUserContext()
+    if (!userContext) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!userContext.canViewReports) {
+      return NextResponse.json({ error: 'Forbidden - Insufficient permissions to view analytics' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || '30d'
     
@@ -28,7 +39,12 @@ export async function GET(request: NextRequest) {
         startDate.setDate(now.getDate() - 30)
     }
 
-    // Fetch comprehensive analytics data
+    // Create data access filter based on user context
+    const dataAccessFilter = createDataAccessFilter(userContext)
+    const ventureFilter = dataAccessFilter.ventures
+    const activityFilter = dataAccessFilter.activities
+
+    // Fetch comprehensive analytics data with user-based filtering
     const [
       totalVentures,
       venturesInPeriod,
@@ -41,28 +57,56 @@ export async function GET(request: NextRequest) {
       recentActivities,
       workflowRuns
     ] = await Promise.all([
-      prisma.venture.count(),
+      prisma.venture.count({ where: ventureFilter }),
       prisma.venture.count({
         where: {
-          createdAt: {
-            gte: startDate
-          }
+          AND: [
+            ventureFilter,
+            {
+              createdAt: {
+                gte: startDate
+              }
+            }
+          ]
         }
       }),
-      prisma.user.count(),
-      prisma.user.count({
+      // Users count - only show organization users for non-admins
+      userContext.isAdmin ? prisma.user.count() : prisma.user.count({
+        where: userContext.organization ? { organization: userContext.organization } : {}
+      }),
+      userContext.isAdmin ? prisma.user.count({
         where: {
           createdAt: {
             gte: startDate
           }
         }
+      }) : prisma.user.count({
+        where: {
+          AND: [
+            userContext.organization ? { organization: userContext.organization } : {},
+            {
+              createdAt: {
+                gte: startDate
+              }
+            }
+          ]
+        }
       }),
-      prisma.gEDSIMetric.count(),
       prisma.gEDSIMetric.count({
         where: {
-          status: {
-            in: ['COMPLETED', 'VERIFIED']
-          }
+          venture: ventureFilter
+        }
+      }),
+      prisma.gEDSIMetric.count({
+        where: {
+          AND: [
+            { venture: ventureFilter },
+            {
+              status: {
+                in: ['COMPLETED', 'VERIFIED']
+              }
+            }
+          ]
         }
       }),
       prisma.workflow.count(),
@@ -73,9 +117,14 @@ export async function GET(request: NextRequest) {
       }),
       prisma.activity.findMany({
         where: {
-          createdAt: {
-            gte: startDate
-          }
+          AND: [
+            activityFilter,
+            {
+              createdAt: {
+                gte: startDate
+              }
+            }
+          ]
         },
         take: 100,
         orderBy: {
@@ -143,10 +192,15 @@ export async function GET(request: NextRequest) {
       
       const weeklyVentures = await prisma.venture.count({
         where: {
-          createdAt: {
-            gte: weekStart,
-            lt: date
-          }
+          AND: [
+            ventureFilter,
+            {
+              createdAt: {
+                gte: weekStart,
+                lt: date
+              }
+            }
+          ]
         }
       })
       
@@ -187,7 +241,7 @@ export async function GET(request: NextRequest) {
         successRate: workflowSuccessRate
       },
       insights: {
-        topSectors: await getTopSectors(),
+        topSectors: await getTopSectors(ventureFilter),
         riskFactors: calculateRiskFactors(recentActivities),
         recommendations: generateRecommendations(gedsiComplianceRate, userEngagementRate, workflowSuccessRate)
       }
@@ -201,9 +255,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getTopSectors() {
+async function getTopSectors(ventureFilter: any) {
   try {
     const ventures = await prisma.venture.findMany({
+      where: ventureFilter,
       select: {
         sector: true,
         stage: true,

@@ -37,56 +37,24 @@
 
 ## 🔐 Authentication
 
-### JWT Authentication
+### NextAuth session/JWT (local repo)
 
-All API requests require authentication using JWT tokens.
+- Sign-in is handled via NextAuth at `/api/auth/[...nextauth]` using Google and Credentials providers.
+- API routes validate the server session. When calling APIs from the browser, cookies are sent automatically.
+- When calling from tools (Postman/curl), authenticate via the UI first and reuse the session cookie, or call your APIs from within the app.
 
-```bash
-# Get access token
-curl -X POST https://api.miv-platform.com/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
-
-# Response
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 3600,
-  "token_type": "Bearer"
-}
-```
-
-### Using Access Tokens
-
-```bash
-# Include token in Authorization header
-curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  https://api.miv-platform.com/v1/ventures
-```
-
-### Refresh Tokens
-
-```bash
-# Refresh expired token
-curl -X POST https://api.miv-platform.com/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refresh_token": "YOUR_REFRESH_TOKEN"
-  }'
+Example (from client):
+```ts
+await fetch('/api/ventures', { credentials: 'include' })
 ```
 
 ---
 
 ## 🌐 Base URLs
 
-| Environment | Base URL | Description |
-|-------------|----------|-------------|
-| **Production** | `https://api.miv-platform.com/v2` | Live production API |
-| **Staging** | `https://api-staging.miv-platform.com/v2` | Pre-production testing |
-| **Development** | `https://api-dev.miv-platform.com/v2` | Development environment |
+| Environment | Base URL |
+|-------------|----------|
+| **Local Dev** | `http://localhost:3000` |
 
 ---
 
@@ -228,10 +196,12 @@ X-RateLimit-Reset: 1642234567
 
 ## 🏢 Ventures API
 
+All routes are under `/api`.
+
 ### List Ventures
 
 ```http
-GET /ventures
+GET /api/ventures
 ```
 
 **Query Parameters:**
@@ -280,7 +250,7 @@ GET /ventures
 ### Get Venture
 
 ```http
-GET /ventures/{venture_id}
+GET /api/ventures/{venture_id}
 ```
 
 **Response:**
@@ -341,7 +311,7 @@ GET /ventures/{venture_id}
 ### Create Venture
 
 ```http
-POST /ventures
+POST /api/ventures
 ```
 
 **Request Body:**
@@ -366,23 +336,23 @@ POST /ventures
 ### Update Venture
 
 ```http
-PUT /ventures/{venture_id}
+PUT /api/ventures/{venture_id}
 ```
 
 ### Delete Venture
 
 ```http
-DELETE /ventures/{venture_id}
+DELETE /api/ventures/{venture_id}
 ```
 
 ---
 
-## 📊 GEDSI Analytics API
+## 📊 GEDSI Metrics API
 
 ### Get Venture GEDSI Metrics
 
 ```http
-GET /ventures/{venture_id}/gedsi
+GET /api/ventures/{venture_id}/gedsi
 ```
 
 **Response:**
@@ -423,10 +393,12 @@ GET /ventures/{venture_id}/gedsi
 }
 ```
 
-### Update GEDSI Metrics
+### Create/Update/Delete GEDSI Metrics
 
 ```http
-PUT /ventures/{venture_id}/gedsi
+POST /api/ventures/{venture_id}/gedsi
+PUT /api/ventures/{venture_id}/gedsi
+DELETE /api/ventures/{venture_id}/gedsi?metricId=...
 ```
 
 **Request Body:**
@@ -532,7 +504,7 @@ GET /capital/portfolio
 ### Upload Document
 
 ```http
-POST /documents
+POST /api/documents/upload
 Content-Type: multipart/form-data
 ```
 
@@ -567,13 +539,13 @@ Content-Type: multipart/form-data
 ### Get Document
 
 ```http
-GET /documents/{document_id}
+GET /api/documents/{document_id}
 ```
 
-### Analyze Document
+### Document Analytics
 
 ```http
-POST /documents/{document_id}/analyze
+GET /api/documents/analytics
 ```
 
 **Response:**
@@ -608,7 +580,7 @@ POST /documents/{document_id}/analyze
 ### Get Current User
 
 ```http
-GET /users/me
+GET /api/users/me
 ```
 
 **Response:**
@@ -641,13 +613,13 @@ GET /users/me
 ### List Users
 
 ```http
-GET /users
+GET /api/users
 ```
 
 ### Create User
 
 ```http
-POST /users
+POST /api/users
 ```
 
 ---
@@ -657,7 +629,7 @@ POST /users
 ### Analyze Venture
 
 ```http
-POST /ai/analyze-venture
+POST /api/ai/analyze-venture
 ```
 
 **Request Body:**
@@ -706,10 +678,10 @@ POST /ai/analyze-venture
 }
 ```
 
-### Generate Report
+### GEDSI Insights
 
 ```http
-POST /ai/generate-report
+POST /api/ai/gedsi-insights
 ```
 
 **Request Body:**
@@ -735,7 +707,7 @@ POST /ai/analyze-document
 ### Get Dashboard Analytics
 
 ```http
-GET /analytics/dashboard
+GET /api/analytics
 ```
 
 **Response:**
@@ -768,10 +740,10 @@ GET /analytics/dashboard
 }
 ```
 
-### Get Custom Analytics
+### Custom Dashboards
 
 ```http
-POST /analytics/custom
+GET /api/custom-dashboards
 ```
 
 **Request Body:**
@@ -791,201 +763,22 @@ POST /analytics/custom
 ---
 
 ## 🔍 Search API
-
-### Search Ventures
-
-```http
-GET /search/ventures
-```
-
-**Query Parameters:**
-- `q` (string): Search query
-- `filters` (object): Advanced filters
-- `sort_by` (string): Sort field
-- `sort_order` (string): Sort direction
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "results": [
-      {
-        "id": "ven_123456789",
-        "name": "EcoTech Solutions",
-        "description": "Sustainable technology solutions",
-        "relevance_score": 0.95,
-        "highlights": {
-          "name": ["<em>Eco</em>Tech Solutions"],
-          "description": ["Sustainable <em>technology</em> solutions"]
-        }
-      }
-    ],
-    "total": 25,
-    "facets": {
-      "stages": {
-        "due_diligence": 10,
-        "investment": 8,
-        "portfolio": 7
-      },
-      "sectors": {
-        "technology": 15,
-        "healthcare": 5,
-        "education": 5
-      }
-    }
-  }
-}
-```
-
-### Global Search
-
-```http
-GET /search/global
-```
+Use query params on `/api/ventures` (e.g., `?search=...&stage=...&status=...`).
 
 ---
 
 ## 📤 Export API
-
-### Export Ventures
-
-```http
-POST /export/ventures
-```
-
-**Request Body:**
-```json
-{
-  "format": "excel",
-  "filters": {
-    "stages": ["due_diligence", "investment"],
-    "date_from": "2024-01-01"
-  },
-  "fields": ["name", "stage", "funding_amount", "gedsi_score"],
-  "include_analytics": true
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "export_id": "exp_123456789",
-    "status": "processing",
-    "download_url": "https://api.miv-platform.com/exports/exp_123456789/download",
-    "expires_at": "2024-01-22T10:30:00Z"
-  }
-}
-```
-
-### Get Export Status
-
-```http
-GET /export/{export_id}
-```
+Not available in this repo.
 
 ---
 
 ## 🔗 Webhooks
-
-### Configure Webhook
-
-```http
-POST /webhooks
-```
-
-**Request Body:**
-```json
-{
-  "url": "https://your-app.com/webhooks/miv",
-  "events": ["venture.created", "venture.updated", "investment.completed"],
-  "secret": "your-webhook-secret"
-}
-```
-
-### Webhook Events
-
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `venture.created` | New venture created | Venture object |
-| `venture.updated` | Venture updated | Venture object |
-| `venture.stage_changed` | Venture stage changed | Stage change details |
-| `investment.completed` | Investment finalized | Investment details |
-| `document.uploaded` | Document uploaded | Document object |
-| `gedsi.updated` | GEDSI metrics updated | GEDSI metrics |
-
-### Webhook Payload Example
-
-```json
-{
-  "event": "venture.created",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "data": {
-    "venture_id": "ven_123456789",
-    "name": "EcoTech Solutions",
-    "stage": "screening",
-    "created_by": "usr_123456789"
-  }
-}
-```
+Not available in this repo.
 
 ---
 
 ## 📚 SDKs & Libraries
-
-### JavaScript/TypeScript SDK
-
-```bash
-npm install @miv-platform/sdk
-```
-
-```typescript
-import { MIVClient } from '@miv-platform/sdk';
-
-const client = new MIVClient({
-  apiKey: 'your-api-key',
-  environment: 'production'
-});
-
-// Get ventures
-const ventures = await client.ventures.list({
-  page: 1,
-  limit: 20
-});
-
-// Create venture
-const venture = await client.ventures.create({
-  name: 'EcoTech Solutions',
-  description: 'Sustainable technology solutions'
-});
-```
-
-### Python SDK
-
-```bash
-pip install miv-platform
-```
-
-```python
-from miv_platform import MIVClient
-
-client = MIVClient(api_key='your-api-key')
-
-# Get ventures
-ventures = client.ventures.list(page=1, limit=20)
-
-# Create venture
-venture = client.ventures.create({
-    'name': 'EcoTech Solutions',
-    'description': 'Sustainable technology solutions'
-})
-```
-
-### Postman Collection
-
-Download our [Postman Collection](https://api.miv-platform.com/postman-collection.json) for easy API testing.
+No official SDKs. Use `fetch`/HTTP against `/api/*` routes.
 
 ---
 

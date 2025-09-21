@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { prisma } from '@/lib/prisma'
 import { AIServices } from '@/lib/ai-services'
 import { IRIS_GEDSI_METRICS } from '@/lib/iris-metrics'
+import { parseFounderTypes } from '@/lib/gedsi-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -92,14 +94,21 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Create activity log
+    // Single, clean activity log
     await prisma.activity.create({
       data: {
-        type: 'VENTURE_CREATED',
+        type: 'NOTE_ADDED',
         title: 'AI Analysis Completed',
-        description: `AI analysis completed for ${venture.name} with ${analysisResult.readinessScore}% readiness score`,
+        description: `Readiness: ${analysisResult.readinessScore}% | GEDSI: ${analysisResult.gedsiAlignment}%`,
         ventureId: ventureId,
-        userId: session.user.email as string,
+        userId: session.user.id as string,
+        metadata: {
+          kind: 'ai_analysis_summary',
+          readinessScore: analysisResult.readinessScore,
+          gedsiAlignment: analysisResult.gedsiAlignment,
+          suggestedMetrics: (analysisResult.suggestedMetrics || []).map((m: any) => m.code),
+          riskLevel: analysisResult.riskAssessment?.level || null
+        }
       }
     })
 
@@ -129,7 +138,7 @@ function calculateGEDSIAlignment(venture: any): number {
   let score = 50 // Base score
   
   // Founder types bonus
-  const founderTypes = JSON.parse(venture.founderTypes || '[]')
+  const founderTypes = parseFounderTypes(venture.founderTypes)
   if (founderTypes.includes('women-led')) score += 15
   if (founderTypes.includes('disability-inclusive')) score += 15
   if (founderTypes.includes('rural-focus')) score += 10
@@ -176,7 +185,7 @@ function generateRecommendations(venture: any): string[] {
 
 function suggestMetrics(venture: any): any[] {
   const suggestions = []
-  const founderTypes = JSON.parse(venture.founderTypes || '[]')
+  const founderTypes = parseFounderTypes(venture.founderTypes)
   const inclusionFocus = venture.inclusionFocus?.toLowerCase() || ''
   
   // Gender-related metrics

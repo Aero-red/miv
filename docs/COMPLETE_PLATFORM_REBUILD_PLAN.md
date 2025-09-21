@@ -16,6 +16,12 @@
 
 This document outlines a complete rebuild of the MIV Platform to meet and exceed industry standards, competing directly with market leaders like Affinity, DealCloud, Workiva, and Watershed. The rebuild will transform MIV from a basic venture management tool into a world-class, enterprise-grade platform for impact investing.
 
+> Note (2025-09): Roadmap vs. Current State
+>
+> - Current: Next.js API routes + Prisma 6 + SQLite (dev), NextAuth sessions, `/api/*` endpoints.
+> - Near-term: PostgreSQL in production, auth/RBAC hardening, S3 docs, incremental observability.
+> - Roadmap: Microservices, API gateway, Kafka, Elasticsearch, vector DB, K8s — to be adopted gradually when needed, not upfront.
+
 ### 🏆 Target Market Position
 - **Primary**: Leading venture pipeline management platform for impact investors
 - **Secondary**: Comprehensive ESG/impact measurement platform

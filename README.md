@@ -47,11 +47,12 @@ Become the market leader in venture pipeline management for impact investors, co
 
 ### 🚀 Key Value Propositions
 - **Unified Platform**: CRM + Program Operations + Impact Measurement in one solution
+- **Multi-User Enterprise System**: 8 distinct user roles with organization-based data isolation
 - **GEDSI-Native**: Built-in gender, disability, and social inclusion tracking
 - **AI-First**: Advanced AI capabilities across all workflows
 - **Standards Compliance**: Native IRIS+, 2X Criteria, B Lab, ISSB support
 - **Emerging Markets Focus**: Designed for developing economies and inclusive growth
-- **Enterprise Ready**: Multi-tenant, scalable, secure, and compliant
+- **Enterprise Security**: Role-based access control with comprehensive data privacy
 
 ---
 
@@ -74,6 +75,45 @@ Become the market leader in venture pipeline management for impact investors, co
 5. **Standards Compliance**: Native IRIS+, 2X, B Lab, ISSB support
 
 ---
+
+## 👥 Multi-User Enterprise System
+
+### 🔐 Role-Based Access Control (RBAC)
+
+The MIV platform implements a comprehensive 8-role user system with organization-based data isolation:
+
+| Role | Access Level | Key Capabilities |
+|------|--------------|------------------|
+| **System Admin** | Full Platform | Complete system control, cross-organizational access |
+| **Organization Manager** | Organization-wide | Team management, venture oversight, reporting |
+| **Venture Manager** | Pipeline Focus | Create ventures, manage deal flow, assignments |
+| **GEDSI Analyst** | Impact Metrics | Social impact tracking, compliance analysis |
+| **Capital Facilitator** | Fund Operations | Investment management, capital deployment |
+| **Data Analyst** | Analytics & Reports | Business intelligence, data export capabilities |
+| **Basic User** | Limited Access | Assigned ventures, basic operations |
+| **External Stakeholder** | Read-only | Specific venture access, limited reporting |
+
+### 🏢 Multi-Tenancy Architecture
+
+**Current Implementation: Single Database + Row-Level Security**
+- ✅ **Organization-based data isolation** - Users only see their organization's data
+- ✅ **Assignment-based access** - Access to created or assigned ventures
+- ✅ **Query-time filtering** - Automatic data filtering on all API calls
+- ✅ **Development fallback** - Admin user fallback for development
+- ✅ **Cross-organizational analytics** - Portfolio-wide insights for admins
+
+**Alternative Architectures Supported:**
+- 📊 **Database-per-tenant** - Complete physical isolation (enterprise tier)
+- 📋 **Schema-per-tenant** - Logical separation (PostgreSQL environments)
+- 🔄 **Hybrid approach** - Mixed tenancy models based on client needs
+
+### 🛡️ Security & Data Privacy
+
+- **API-level filtering**: All endpoints automatically filter by user context
+- **Organization isolation**: Complete data separation between organizations  
+- **Role-based permissions**: Granular access control by user role
+- **Audit logging**: Comprehensive activity tracking and access logs
+- **Session management**: Secure JWT-based authentication with NextAuth.js
 
 ## 🏗️ Architecture Overview
 
@@ -196,59 +236,32 @@ graph TB
 
 ## 🛠️ Technology Stack
 
-### **Frontend Stack**
-```typescript
-- Next.js 15 (App Router + Server Components)
-- React 19 (Concurrent Features + Suspense)
-- TypeScript 5.0 (Strict mode)
-- Tailwind CSS 4.0 (Utility-first)
-- Radix UI + Shadcn/ui (Accessible components)
-- TanStack Query (Server state management)
-- Zustand (Client state management)
-- React Hook Form + Zod (Form validation)
-- Recharts (Data visualization)
-- Framer Motion (Animations)
-- React Virtual (Performance optimization)
+### **Frontend**
+```text
+- Next.js 15 (App Router)
+- React 19
+- TypeScript 5
+- Tailwind CSS 4 + shadcn/ui + Radix UI
+- React Hook Form + Zod
+- Recharts, Sonner, Lucide
 ```
 
-### **Backend Stack**
-```typescript
-- Node.js 20 (Latest LTS)
-- TypeScript 5.0 (Strict mode)
-- Fastify (High-performance API framework)
-- Prisma 5 (Type-safe ORM)
-- PostgreSQL 15 (Primary database)
-- Redis 7 (Caching & sessions)
-- Elasticsearch 8 (Search & analytics)
-- Weaviate (Vector database)
-- Apache Kafka (Event streaming)
-- RabbitMQ (Message queuing)
+### **Backend (in-repo)**
+```text
+- Next.js API Routes (Edge/Node runtime)
+- Prisma 6 (ORM)
+- SQLite dev database (prisma/dev.db)
+- NextAuth (Google + Credentials providers, JWT strategy)
+- Nodemailer/Resend for emails
 ```
 
-### **AI/ML Stack**
-```python
-- OpenAI GPT-4 (Text processing)
-- Anthropic Claude (Reasoning)
-- Google AI Gemini (Multi-modal)
-- LangChain (AI orchestration)
-- ChromaDB (Vector storage)
-- Hugging Face (Custom models)
-- TensorFlow/PyTorch (ML models)
-- Ray (Distributed computing)
+### **AI Integrations (optional)**
+```text
+- OpenAI, Anthropic, Google Generative AI SDKs
 ```
 
-### **Infrastructure Stack**
-```yaml
-- Kubernetes (Container orchestration)
-- Docker (Containerization)
-- AWS/GCP (Cloud platform)
-- Terraform (Infrastructure as code)
-- ArgoCD (GitOps deployment)
-- Prometheus + Grafana (Monitoring)
-- ELK Stack (Logging)
-- Jaeger (Distributed tracing)
-- Istio (Service mesh)
-```
+### **Notes**
+- PostgreSQL/Redis/Elasticsearch/Kafka shown in enterprise docs are roadmap items, not required for local development in this repo.
 
 ---
 
@@ -311,8 +324,10 @@ npm install
 cp .env.example .env.local
 # Edit .env.local with your configuration
 
-# Set up database
-npm run db:setup
+# Prepare the SQLite dev database
+npm run db:generate
+npm run db:push
+npm run db:seed
 
 # Start development server
 npm run dev
@@ -337,23 +352,21 @@ kubectl apply -f k8s/
 ### **4. Environment Configuration**
 
 ```bash
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/miv_platform"
-REDIS_URL="redis://localhost:6379"
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-nextauth-secret"
 
-# Authentication
-AUTH0_DOMAIN="your-domain.auth0.com"
-AUTH0_CLIENT_ID="your-client-id"
-AUTH0_CLIENT_SECRET="your-client-secret"
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
-# AI Services
-OPENAI_API_KEY="your-openai-api-key"
-ANTHROPIC_API_KEY="your-anthropic-api-key"
-GOOGLE_AI_API_KEY="your-google-ai-api-key"
+# AI providers (optional)
+OPENAI_API_KEY="..."
+ANTHROPIC_API_KEY="..."
+GOOGLE_GENERATIVE_AI_API_KEY="..."
 
-# Infrastructure
-ELASTICSEARCH_URL="http://localhost:9200"
-KAFKA_BROKERS="localhost:9092"
+# Email (optional)
+RESEND_API_KEY="..."
 ```
 
 ---
@@ -361,22 +374,20 @@ KAFKA_BROKERS="localhost:9092"
 ## 📚 Documentation
 
 ### **Core Documentation**
-- 📖 **[Platform Overview](./docs/MIV_PLATFORM_OVERVIEW.md)** - Comprehensive platform guide
-- 📚 **[API Reference](./docs/API_REFERENCE.md)** - Complete API documentation
-- 👥 **[User Manual](./docs/USER_MANUAL.md)** - End-user documentation
-- 🔧 **[Development Setup](./docs/DEVELOPMENT_SETUP.md)** - Developer environment setup
-- 🤝 **[Contributing Guidelines](./docs/CONTRIBUTING.md)** - How to contribute
+- 📖 **[Platform Overview](./docs/MIV_PLATFORM_OVERVIEW.md)**
+- 📚 **[API Reference](./docs/API_REFERENCE.md)**
+- 👥 **[User Manual](./docs/USER_MANUAL.md)**
+- 🔧 **[Development Setup](./docs/DEVELOPMENT_SETUP.md)**
+- 🤝 **[Contributing Guidelines](./docs/CONTRIBUTING.md)**
 
 ### **Architecture & Implementation**
-- 🏗️ **[Complete Rebuild Plan](./docs/REBUILD_PLAN.md)** - Enterprise architecture plan
-- 🔧 **[Enterprise Architecture](./docs/ENTERPRISE_ARCHITECTURE.md)** - System architecture
-- 📊 **[Current State Assessment](./docs/CURRENT_STATE_ASSESSMENT.md)** - Platform assessment
-- 🔄 **[Migration Strategy](./docs/MIGRATION_STRATEGY.md)** - Migration roadmap
+- 🏗️ **[Complete Rebuild Plan](./docs/COMPLETE_PLATFORM_REBUILD_PLAN.md)**
+- 🔧 **[Enterprise Architecture](./docs/ENTERPRISE_ARCHITECTURE.md)**
+- 📊 **[Current State Assessment](./docs/CURRENT_STATE_ASSESSMENT.md)**
+- 🔄 **[Migration Strategy](./docs/MIGRATION_STRATEGY.md)**
 
 ### **Market & Competitive Analysis**
-- 📈 **[Market Analysis](./docs/MIV_FULL_REPORT_COMBINED.md)** - Comprehensive market research
-- 🎯 **[Competitive Intelligence](./docs/MIV_FULL_REPORT_COMBINED.md)** - Competitive analysis
-- 📋 **[Documentation Upgrade Summary](./docs/DOCUMENTATION_UPGRADE_SUMMARY.md)** - Documentation improvements
+- 📈 **[Market & Competitive Analysis](./docs/MIV_FULL_REPORT_COMBINED.md)**
 
 ---
 

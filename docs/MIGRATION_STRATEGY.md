@@ -4,6 +4,14 @@
 
 This document outlines a phased approach to transform your current monolithic MIV application into an enterprise-grade microservices architecture while maintaining zero downtime and business continuity.
 
+> Addendum (2025-09): Pragmatic strategy aligned to current repo
+>
+> - Phase 1: Migrate Prisma from SQLite to PostgreSQL for production. Keep SQLite for local if preferred.
+> - Phase 2: Harden NextAuth, RBAC, and organization-based filtering; add minimal audit logs; abstract document storage (S3 in prod).
+> - Phase 3: Only extract services where scale or ownership boundaries justify it (start with analytics/notifications if needed).
+> - Phase 4: Introduce lightweight job queue for async work before adopting Kafka; emit internal domain events.
+> - Phase 5: CI/CD, backups/restore, basic observability. The detailed weekly service scaffolding below is roadmap, not immediate.
+
 ## 📊 Current State Analysis
 
 ### **What You Have (Strengths)**

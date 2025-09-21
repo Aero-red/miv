@@ -47,7 +47,54 @@
 
 ### User Roles & Permissions
 
-| Role | Permissions | Description |
+The MIV platform implements a comprehensive role-based access control (RBAC) system with 8 distinct user roles:
+
+| Role | Code | Access Level | Key Permissions | Typical Users |
+|------|------|--------------|-----------------|---------------|
+| **System Administrator** | `ADMIN` | Full Platform | • All system functions<br/>• User management<br/>• Cross-organizational access<br/>• System configuration | Platform administrators |
+| **Organization Manager** | `MANAGER` | Organization-wide | • Team management<br/>• Venture oversight<br/>• Reporting access<br/>• Fund visibility | Senior managers, directors |
+| **Venture Manager** | `VENTURE_MANAGER` | Pipeline Focus | • Create/edit ventures<br/>• Pipeline management<br/>• Deal flow oversight<br/>• Assignment management | Investment managers |
+| **GEDSI Analyst** | `GEDSI_ANALYST` | Impact Metrics | • GEDSI metrics tracking<br/>• Impact analysis<br/>• Social compliance<br/>• Reporting access | Impact measurement specialists |
+| **Capital Facilitator** | `CAPITAL_FACILITATOR` | Fund Operations | • Fund management<br/>• Investment tracking<br/>• Capital deployment<br/>• Financial reporting | Fund managers, CFOs |
+| **Data Analyst** | `ANALYST` | Analytics & Reports | • Data analysis<br/>• Report generation<br/>• Export capabilities<br/>• Dashboard creation | Business analysts, researchers |
+| **Basic User** | `USER` | Limited Access | • View assigned ventures<br/>• Basic data entry<br/>• Profile management<br/>• Limited reporting | Junior staff, interns |
+| **External Stakeholder** | `EXTERNAL_STAKEHOLDER` | Read-only | • View specific ventures<br/>• Limited reporting<br/>• No data modification<br/>• Restricted access | Partners, advisors, investors |
+
+### Data Access Patterns
+
+Your role determines what data you can see and modify:
+
+#### **🔍 What You Can Access:**
+- **Ventures you created** - Full access to ventures you added to the system
+- **Ventures assigned to you** - Complete access to your assigned ventures  
+- **Organization ventures** - Access to ventures within your organization
+- **Role-specific data** - Specialized access based on your role (e.g., GEDSI analysts see impact metrics)
+
+#### **🚫 What You Cannot Access:**
+- **Other organizations' data** - Complete isolation from other organizations (except admins)
+- **Unassigned ventures** - No access to ventures you didn't create or aren't assigned to
+- **Restricted functions** - Features limited by your role permissions
+- **Administrative data** - System configuration and user management (non-admins)
+
+### Organization-Based Isolation
+
+The platform ensures **complete data privacy** between organizations:
+- Users can only see data from their own organization
+- Cross-organizational access is restricted to system administrators
+- All API calls are automatically filtered by organization membership
+- Database queries include organization-based security filters
+
+### Permission Examples by Role
+
+| Function | Admin | Manager | Venture Mgr | GEDSI | Capital | Analyst | User | External |
+|----------|-------|---------|-------------|-------|---------|---------|------|----------|
+| **Create Ventures** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **View All Reports** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Manage Users** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Fund Management** | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **GEDSI Metrics** | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **Export Data** | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **System Settings** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 |------|-------------|-------------|
 | **Admin** | Full access | Complete platform management |
 | **Investment Manager** | Venture management, analytics | Lead investment decisions |

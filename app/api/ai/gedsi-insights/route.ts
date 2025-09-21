@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     ${venturePerformance.slice(0, 5).map(v => `${v.ventureName}: ${v.completionRate.toFixed(1)}%`).join('\n')}
     
     Venture Details:
-    ${ventures.map(v => `${v.name} (${v.sector}): ${JSON.parse(v.founderTypes || '[]').join(', ')}`).join('\n')}
+    ${ventures.map(v => `${v.name} (${v.sector}): ${Array.isArray(v.founderTypes) ? v.founderTypes.join(', ') : String(v.founderTypes || '')}`).join('\n')}
     
     Please provide:
     1. Trend Analysis: What patterns do you see in GEDSI performance?

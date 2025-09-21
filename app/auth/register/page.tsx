@@ -56,14 +56,52 @@ export default function RegisterPage() {
       return
     }
 
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters")
+      setIsLoading(false)
+      return
+    }
+
     try {
-      // Simulate registration process
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.fullName,
+          email: formData.email,
+          organization: formData.organization,
+          role: formData.role.toUpperCase().replace(' ', '_'),
+          password: formData.password,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Registration failed')
+      }
+
+      const user = await response.json()
       
-      // Redirect to dashboard on success
-      window.location.href = "/dashboard"
+      // Auto sign in after successful registration
+      const signInResult = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+        callbackUrl: '/dashboard'
+      })
+
+      if (!signInResult || (signInResult as any).error) {
+        // Registration succeeded but auto sign-in failed
+        // Redirect to login page with success message
+        window.location.href = "/auth/login?message=Registration successful. Please sign in."
+      } else {
+        // Success - redirect to dashboard
+        window.location.href = "/dashboard"
+      }
     } catch (err) {
-      setError("Registration failed. Please try again.")
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -75,6 +113,17 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4">
+      {/* Back to Home Link */}
+      <Link 
+        href="/"
+        className="absolute top-4 left-4 flex items-center gap-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Home
+      </Link>
+      
       <Card className="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-slate-200 dark:border-slate-700 shadow-xl">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
@@ -239,7 +288,7 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <div className="text-sm text-slate-600 dark:text-slate-400">
               Already have an account?{" "}
               <Link 
@@ -247,6 +296,15 @@ export default function RegisterPage() {
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
               >
                 Sign in
+              </Link>
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-500">
+              or{" "}
+              <Link 
+                href="/"
+                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              >
+                return to homepage
               </Link>
             </div>
           </div>

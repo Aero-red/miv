@@ -113,7 +113,6 @@ const navigationItems: NavItem[] = [
       { title: "Document Management", href: "/dashboard/documents", icon: FileText },
       { title: "Notifications", href: "/dashboard/notifications", icon: Bell },
       { title: "Calendar & Events", href: "/dashboard/calendar", icon: Calendar },
-      { title: "Test Environment", href: "/dashboard/test-environment", icon: Settings },
       { title: "System Settings", href: "/dashboard/system-settings", icon: Settings },
       { title: "Workflows", href: "/dashboard/workflows", icon: Activity }
     ]
@@ -266,14 +265,18 @@ export function Sidebar() {
           <div className="space-y-3">
             {/* Quick Actions */}
             <div className="flex space-x-2">
-              <Button size="sm" variant="outline" className="flex-1 text-xs text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900">
-                <Plus className="h-3 w-3 mr-1" />
-                New Venture
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 text-xs text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900">
-                <BarChart className="h-3 w-3 mr-1" />
-                Report
-              </Button>
+              <Link href="/dashboard/venture-intake">
+                <Button size="sm" variant="outline" className="flex-1 text-xs text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900">
+                  <Plus className="h-3 w-3 mr-1" />
+                  New Venture
+                </Button>
+              </Link>
+              <Link href="/dashboard/advanced-reports">
+                <Button size="sm" variant="outline" className="flex-1 text-xs text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900">
+                  <BarChart className="h-3 w-3 mr-1" />
+                  Report
+                </Button>
+              </Link>
             </div>
 
             {/* User Profile */}
@@ -282,13 +285,19 @@ export function Sidebar() {
                 <User className="h-4 w-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                {status === 'authenticated' ? (
+                {status === 'loading' ? (
                   <>
-                    <p className="text-sm font-medium text-slate-100 truncate">{session?.user?.name || session?.user?.email || 'Signed In'}</p>
-                    <p className="text-xs text-slate-400 truncate">{session?.user?.email}</p>
-                    {session?.user && (session.user as any).id && (
-                      <p className="text-[10px] text-slate-500 truncate">ID: {(session.user as any).id}</p>
-                    )}
+                    <p className="text-sm font-medium text-slate-100 truncate">Loading...</p>
+                    <p className="text-xs text-slate-400 truncate">Please wait</p>
+                  </>
+                ) : status === 'authenticated' ? (
+                  <>
+                    <p className="text-sm font-medium text-slate-100 truncate">
+                      {session?.user?.name || session?.user?.email || 'Signed In'}
+                    </p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {session?.user?.email}
+                    </p>
                   </>
                 ) : (
                   <>
@@ -298,11 +307,23 @@ export function Sidebar() {
                 )}
               </div>
               {status === 'authenticated' ? (
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => signOut({ callbackUrl: '/' })}>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 w-6 p-0 text-slate-400 hover:text-slate-300" 
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  title="Sign out"
+                >
                   <LogOut className="h-3 w-3" />
                 </Button>
               ) : (
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => signIn()}>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 w-6 p-0 text-slate-400 hover:text-slate-300" 
+                  onClick={() => signIn()}
+                  title="Sign in"
+                >
                   <User className="h-3 w-3" />
                 </Button>
               )}

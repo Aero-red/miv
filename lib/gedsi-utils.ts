@@ -149,3 +149,43 @@ export function calculateGEDSIComplianceRate(gedsiMetrics: any[]): number {
 
   return Math.round((compliantMetrics.length / gedsiMetrics.length) * 100);
 }
+
+// Safe parser for founderTypes stored in inconsistent formats across the DB
+export function parseFounderTypes(raw: any): string[] {
+  const allowed = new Set([
+    'women-led',
+    'youth-led',
+    'disability-inclusive',
+    'rural-focus',
+    'indigenous-led',
+    'refugee-led',
+    'veteran-led',
+  ])
+
+  const normalize = (s: string) => s.trim().toLowerCase().replace(/[\s_]+/g, '-')
+
+  if (!raw) return []
+  if (Array.isArray(raw)) {
+    return raw.map(String).map(normalize).filter(t => allowed.has(t))
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    try {
+      if (trimmed.startsWith('[') || trimmed.startsWith('{') || trimmed.startsWith('"')) {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) {
+          return parsed.map(String).map(normalize).filter(t => allowed.has(t))
+        }
+        if (typeof parsed === 'string') {
+          const token = normalize(parsed)
+          return allowed.has(token) ? [token] : []
+        }
+      }
+    } catch (_) {
+      // ignore and fall back
+    }
+    const tokens = trimmed.includes(',') ? trimmed.split(',') : [trimmed]
+    return tokens.map(String).map(normalize).filter(t => allowed.has(t))
+  }
+  return []
+}

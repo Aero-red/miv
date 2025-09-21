@@ -18,6 +18,7 @@ import {
   Cpu,
   HardDrive,
   MemoryStickIcon as Memory,
+  BarChart3,
   Save,
   RefreshCw,
   CheckCircle,

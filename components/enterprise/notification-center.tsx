@@ -39,7 +39,7 @@ interface Notification {
   type: 'info' | 'success' | 'warning' | 'error'
   category: 'system' | 'venture' | 'team' | 'finance'
   timestamp: Date
-  read: boolean
+  isRead: boolean
   actionUrl?: string
   actionLabel?: string
 }
@@ -62,7 +62,7 @@ export function NotificationCenter({
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
 
-  const unreadCount = notifications.filter(n => !n.read).length
+    const unreadCount = notifications.filter(n => !n.isRead).length
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -107,7 +107,7 @@ export function NotificationCenter({
   const filteredNotifications = notifications.filter(notification => {
     switch (activeTab) {
       case 'unread':
-        return !notification.read
+        return !notification.isRead
       case 'venture':
         return notification.category === 'venture'
       case 'team':
@@ -189,7 +189,7 @@ export function NotificationCenter({
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-gray-50 transition-colors ${
-                        !notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                        !notification.isRead ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                       }`}
                     >
                       <div className="flex items-start space-x-3">
@@ -205,7 +205,7 @@ export function NotificationCenter({
                                 <p className="text-sm font-medium text-gray-900 truncate">
                                   {notification.title}
                                 </p>
-                                {!notification.read && (
+                                {!notification.isRead && (
                                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                 )}
                               </div>
@@ -230,16 +230,16 @@ export function NotificationCenter({
                             </div>
                             
                             <div className="flex items-center space-x-1 ml-2">
-                              {!notification.read && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => onMarkAsRead(notification.id)}
-                                >
-                                  <Check className="h-3 w-3" />
-                                </Button>
-                              )}
+              {!notification.isRead && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => onMarkAsRead(notification.id)}
+                >
+                  <Check className="h-3 w-3" />
+                </Button>
+              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -292,7 +292,7 @@ export const sampleNotifications: Notification[] = [
     type: 'warning',
     category: 'venture',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: false,
+    isRead: false,
     actionUrl: '/ventures/techstart-inc',
     actionLabel: 'Review'
   },
@@ -303,7 +303,7 @@ export const sampleNotifications: Notification[] = [
     type: 'success',
     category: 'venture',
     timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-    read: false,
+    isRead: false,
     actionUrl: '/ventures/greentech-solutions',
     actionLabel: 'View Report'
   },
@@ -314,7 +314,7 @@ export const sampleNotifications: Notification[] = [
     type: 'info',
     category: 'team',
     timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-    read: true,
+    isRead: true,
     actionUrl: '/team/sarah-chen',
     actionLabel: 'View Profile'
   },
@@ -325,7 +325,7 @@ export const sampleNotifications: Notification[] = [
     type: 'success',
     category: 'finance',
     timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
-    read: true,
+    isRead: true,
     actionUrl: '/deals/ecofarm-vietnam',
     actionLabel: 'View Deal'
   },

@@ -27,6 +27,8 @@ import {
   MapPin,
   FileText,
   Lightbulb,
+  Edit,
+  X,
 } from "lucide-react"
 import {
   Dialog,
@@ -359,7 +361,11 @@ export default function TeamManagement() {
     email: "",
     organization: "",
     image: "",
+    password: "",
   })
+
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null)
+  const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false)
 
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false)
   const [newProject, setNewProject] = useState({
@@ -395,10 +401,17 @@ export default function TeamManagement() {
   const handleAddMember = async () => {
     if (newMember.name && newMember.role && newMember.email) {
       try {
-        const response = await fetch('/api/team/members', {
+        const response = await fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newMember),
+          body: JSON.stringify({
+            name: newMember.name,
+            email: newMember.email,
+            role: newMember.role,
+            organization: newMember.organization,
+            image: newMember.image,
+            password: newMember.password || undefined,
+          }),
         })
         
         if (!response.ok) {
@@ -406,14 +419,77 @@ export default function TeamManagement() {
           throw new Error(error.error || 'Failed to create member')
         }
         
-        const createdMember = await response.json()
-        setTeamMembers((prev) => [createdMember, ...prev])
-        setNewMember({ name: "", role: "USER", email: "", organization: "", image: "" })
+        const createdUser = await response.json()
+        // Refresh team members to get the new user with all relationships
+        const updatedMembers = await fetchTeamMembers()
+        setTeamMembers(updatedMembers)
+        setNewMember({ name: "", role: "USER", email: "", organization: "", image: "", password: "" })
         setIsAddMemberDialogOpen(false)
       } catch (error) {
         console.error('Error creating member:', error)
         setError(error instanceof Error ? error.message : 'Failed to create member')
       }
+    }
+  }
+
+  const handleEditMember = async (member: TeamMember) => {
+    setEditingMember(member)
+    setIsEditMemberDialogOpen(true)
+  }
+
+  const handleUpdateMember = async () => {
+    if (!editingMember) return
+    
+    try {
+      const response = await fetch(`/api/users/${editingMember.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingMember.name,
+          email: editingMember.email,
+          role: editingMember.role,
+          organization: editingMember.organization,
+        }),
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update member')
+      }
+      
+      const updatedUser = await response.json()
+      // Refresh team members
+      const updatedMembers = await fetchTeamMembers()
+      setTeamMembers(updatedMembers)
+      setEditingMember(null)
+      setIsEditMemberDialogOpen(false)
+    } catch (error) {
+      console.error('Error updating member:', error)
+      setError(error instanceof Error ? error.message : 'Failed to update member')
+    }
+  }
+
+  const handleDeleteMember = async (memberId: string) => {
+    if (!confirm('Are you sure you want to delete this team member? This action cannot be undone.')) {
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/users/${memberId}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete member')
+      }
+      
+      // Refresh team members
+      const updatedMembers = await fetchTeamMembers()
+      setTeamMembers(updatedMembers)
+    } catch (error) {
+      console.error('Error deleting member:', error)
+      setError(error instanceof Error ? error.message : 'Failed to delete member')
     }
   }
 
@@ -617,6 +693,16 @@ export default function TeamManagement() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="memberPassword">Password</Label>
+                  <Input
+                    id="memberPassword"
+                    type="password"
+                    value={newMember.password}
+                    onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+                    placeholder="Leave empty for no password (OAuth only)"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="memberImage">Profile Image URL (Optional)</Label>
                   <Input
                     id="memberImage"
@@ -630,6 +716,72 @@ export default function TeamManagement() {
                   Cancel
                 </Button>
                 <Button onClick={handleAddMember}>Add Member</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Member Dialog */}
+          <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Edit Team Member</DialogTitle>
+                <DialogDescription>Update the details for this team member.</DialogDescription>
+              </DialogHeader>
+              {editingMember && (
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editMemberName">Name</Label>
+                    <Input
+                      id="editMemberName"
+                      value={editingMember.name}
+                      onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editMemberRole">Role</Label>
+                    <Select
+                      value={editingMember.role}
+                      onValueChange={(value) => setEditingMember({ ...editingMember, role: value as any })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USER">User</SelectItem>
+                        <SelectItem value="ANALYST">Analyst</SelectItem>
+                        <SelectItem value="MANAGER">Manager</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                        <SelectItem value="VENTURE_MANAGER">Venture Manager</SelectItem>
+                        <SelectItem value="GEDSI_ANALYST">GEDSI Analyst</SelectItem>
+                        <SelectItem value="CAPITAL_FACILITATOR">Capital Facilitator</SelectItem>
+                        <SelectItem value="EXTERNAL_STAKEHOLDER">External Stakeholder</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editMemberEmail">Email</Label>
+                    <Input
+                      id="editMemberEmail"
+                      type="email"
+                      value={editingMember.email}
+                      onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editMemberOrganization">Organization</Label>
+                    <Input
+                      id="editMemberOrganization"
+                      value={editingMember.organization || ''}
+                      onChange={(e) => setEditingMember({ ...editingMember, organization: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditMemberDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateMember}>Save Changes</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -677,8 +829,34 @@ export default function TeamManagement() {
                     filteredMembers.map((member) => (
                       <Dialog key={member.id}>
                         <DialogTrigger asChild>
-                          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                            <CardContent className="p-6 flex flex-col items-center text-center">
+                          <Card className="hover:shadow-lg transition-shadow cursor-pointer group">
+                            <CardContent className="p-6 flex flex-col items-center text-center relative">
+                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEditMember(member)
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteMember(member.id)
+                                    }}
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
                               <Avatar className="h-20 w-20 mb-4">
                                 <AvatarImage src={member.image || "/placeholder.svg"} alt={member.name || 'User'} />
                                 <AvatarFallback className="bg-teal-100 text-teal-700 text-2xl font-bold">
@@ -693,10 +871,10 @@ export default function TeamManagement() {
                               <p className="text-xs text-gray-500 mb-2">{member.organization}</p>
                               <div className="flex flex-wrap justify-center gap-2">
                                 <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                                  {member._count.ledProjects} Projects Led
+                                  {member._count?.ledProjects || 0} Projects Led
                                 </Badge>
                                 <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                  {member._count.assignedTasks} Tasks
+                                  {member._count?.assignedTasks || 0} Tasks
                                 </Badge>
                               </div>
                             </CardContent>
@@ -743,15 +921,15 @@ export default function TeamManagement() {
                               </h5>
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <p className="font-medium text-blue-600">{member._count.ledProjects}</p>
+                                  <p className="font-medium text-blue-600">{member._count?.ledProjects || 0}</p>
                                   <p className="text-gray-600">Projects Led</p>
                                 </div>
                                 <div>
-                                  <p className="font-medium text-green-600">{member._count.projectMemberships}</p>
+                                  <p className="font-medium text-green-600">{member._count?.projectMemberships || 0}</p>
                                   <p className="text-gray-600">Project Memberships</p>
                                 </div>
                                 <div>
-                                  <p className="font-medium text-orange-600">{member._count.assignedTasks}</p>
+                                  <p className="font-medium text-orange-600">{member._count?.assignedTasks || 0}</p>
                                   <p className="text-gray-600">Active Tasks</p>
                                 </div>
                               </div>
@@ -762,7 +940,7 @@ export default function TeamManagement() {
                                 <span>Recent Projects</span>
                               </h5>
                               <div className="space-y-2">
-                                {member.ledProjects.length > 0 && (
+                                {member.ledProjects && member.ledProjects.length > 0 && (
                                   <div>
                                     <p className="text-sm font-medium text-blue-600">Leading:</p>
                                     {member.ledProjects.slice(0, 3).map((project) => (
@@ -772,7 +950,7 @@ export default function TeamManagement() {
                                     ))}
                                   </div>
                                 )}
-                                {member.projectMemberships.length > 0 && (
+                                {member.projectMemberships && member.projectMemberships.length > 0 && (
                                   <div>
                                     <p className="text-sm font-medium text-green-600">Member of:</p>
                                     {member.projectMemberships.slice(0, 3).map((project) => (
@@ -782,7 +960,7 @@ export default function TeamManagement() {
                                     ))}
                                   </div>
                                 )}
-                                {member.ledProjects.length === 0 && member.projectMemberships.length === 0 && (
+                                {(!member.ledProjects || member.ledProjects.length === 0) && (!member.projectMemberships || member.projectMemberships.length === 0) && (
                                   <p className="text-sm text-gray-500">No active projects.</p>
                                 )}
                               </div>
@@ -1012,8 +1190,8 @@ export default function TeamManagement() {
                                 </span>
                               </div>
                               <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                <span>{project._count.tasks} tasks</span>
-                                <span>{project._count.members} members</span>
+                                <span>{project._count?.tasks || 0} tasks</span>
+                                <span>{project._count?.members || 0} members</span>
                                 {project.venture && <span>Linked to {project.venture.name}</span>}
                               </div>
                             </CardContent>
@@ -1131,8 +1309,8 @@ export default function TeamManagement() {
                                 ) : (
                                   <p className="text-sm text-gray-500">No tasks defined for this project.</p>
                                 )}
-                                {project._count.tasks > 5 && (
-                                  <p className="text-xs text-gray-500">And {project._count.tasks - 5} more tasks...</p>
+                                {(project._count?.tasks || 0) > 5 && (
+                                  <p className="text-xs text-gray-500">And {(project._count?.tasks || 0) - 5} more tasks...</p>
                                 )}
                               </div>
                             </div>
@@ -1439,10 +1617,10 @@ export default function TeamManagement() {
                               <div className="flex items-center justify-between mt-2">
                                 <p className="text-xs text-gray-500 flex items-center gap-1">
                                   <Users className="h-3 w-3" />
-                                  {event._count.attendees} attendees
+                                  {event._count?.attendees || 0} attendees
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  Organized by {event.organizer.name}
+                                  Organized by {event.organizer?.name || 'Unknown'}
                                 </p>
                               </div>
                               {event.isRecurring && (

@@ -2,6 +2,72 @@
 
 ## 🏗️ System Architecture Overview
 
+### **Multi-Tenancy & Security Architecture**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Load Balancer / CDN                        │
+│                    (CloudFlare / AWS CloudFront)               │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+┌─────────────────────────────────────────────────────────────────┐
+│                     Authentication Layer                        │
+│              (NextAuth.js → Auth0/Okta Enterprise)            │
+│     User Context • Role Validation • Session Management        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+┌─────────────────────────────────────────────────────────────────┐
+│                    API Gateway & Security                       │
+│          Rate Limiting • Request Validation • Logging          │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │                       │                       │
+┌───────▼────────┐    ┌────────▼────────┐    ┌────────▼────────┐
+│  Next.js       │    │  Data Access    │    │  Multi-Tenant   │
+│  Application   │    │  Control Layer  │    │  Database       │
+│  Server        │    │  (Row-Level     │    │  Architecture   │
+│                │    │   Security)     │    │                 │
+└────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                    ┌───────────┼───────────┐
+                    │           │           │
+            ┌───────▼───┐  ┌────▼────┐  ┌───▼────────┐
+            │Organization│  │ User    │  │ Venture    │
+            │   Data     │  │Context  │  │ Access     │
+            │ Isolation  │  │Validation│  │ Control    │
+            └────────────┘  └─────────┘  └────────────┘
+```
+
+## 🔐 **Multi-User Security Model**
+
+### **Current Implementation: Single Database + Row-Level Security**
+
+```typescript
+// User Context & Data Filtering Architecture
+interface UserContext {
+  user: { id, email, role, organization }
+  permissions: { canManageUsers, canCreateVentures, canViewReports }
+  dataAccess: {
+    ventures: "created_by OR assigned_to OR same_organization",
+    activities: "user_activities OR venture_activities",
+    reports: "role_based_access"
+  }
+}
+```
+
+### **Role-Based Access Control (RBAC) System**
+
+| Role Level | Users | Data Access | Permissions |
+|------------|-------|-------------|-------------|
+| **System Admin** | 1 | All organizations | Full system control |
+| **Org Manager** | 1-5 per org | Organization-wide | Team & venture management |
+| **Specialists** | 2-10 per org | Role-specific data | Functional expertise |
+| **Basic Users** | 5-50 per org | Assigned ventures | Limited operations |
+| **External** | As needed | Specific ventures | Read-only access |
+
+## 🏗️ System Architecture Overview
+
 ### **1. Microservices Architecture**
 
 ```
