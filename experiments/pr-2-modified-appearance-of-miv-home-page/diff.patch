@@ -1,0 +1,1449 @@
+diff --git a/WARP.md b/WARP.md
+new file mode 100644
+index 0000000..0feae3e
+--- /dev/null
++++ b/WARP.md
+@@ -0,0 +1,195 @@
++# WARP.md
++
++This file provides guidance to WARP (warp.dev) when working with code in this repository.
++
++## Project Overview
++
++MIV (Mekong Inclusive Ventures) is an enterprise-grade venture pipeline management platform built for impact investing. The platform specializes in:
++
++- **AI-powered venture analysis** with multi-model architecture (OpenAI, Anthropic, Google AI)
++- **GEDSI integration** (Gender, Equity, Disability, Social Inclusion) with IRIS+ compliance
++- **Real-time venture pipeline management** from intake to exit
++- **Impact measurement** with comprehensive ESG tracking
++- **Capital facilitation** and investment management
++
++## Technology Stack
++
++- **Frontend**: Next.js 15 with App Router, React 19, TypeScript 5.0, Tailwind CSS 4.0
++- **UI Components**: Radix UI + shadcn/ui for accessibility-first design
++- **Database**: Prisma ORM with SQLite (dev) → PostgreSQL (production migration planned)
++- **AI Integration**: Multi-model AI with OpenAI GPT-4, Anthropic Claude, Google Gemini
++- **Authentication**: NextAuth.js (currently bypassed in development)
++- **Validation**: Zod schemas for type-safe API validation
++
++## Common Development Commands
++
++### Database Operations
++```bash
++# Generate Prisma client after schema changes
++npm run db:generate
++
++# Push database schema changes (development)
++npm run db:push
++
++# Run database migrations (production)
++npm run db:migrate
++
++# Open Prisma Studio for database management
++npm run db:studio
++
++# Seed database with sample data
++npm run db:seed
++```
++
++### Development Workflow
++```bash
++# Start development server
++npm run dev
++
++# Build for production
++npm run build
++
++# Start production server
++npm start
++
++# Run linting
++npm run lint
++
++# Install dependencies
++npm install
++```
++
++### Testing Individual Components
++- Visit `/dashboard/venture-intake` for the main venture intake form
++- Visit `/dashboard/gedsi-tracker` for GEDSI metrics tracking
++- API endpoints are available at `/api/ventures`, `/api/gedsi-metrics`, `/api/ai/*`
++
++## Architecture Overview
++
++### Application Structure
++
++#### Frontend Architecture
++- **App Router Pattern**: Uses Next.js 15 App Router with nested layouts
++- **Dashboard Layout**: `app/dashboard/layout.tsx` provides the main application shell
++- **Component-based**: Reusable UI components in `components/ui/` (shadcn/ui) and custom enterprise components in `components/enterprise/`
++- **Client-side State**: Uses React hooks with client-side navigation
++
++#### Backend Architecture
++- **API Routes**: RESTful APIs in `app/api/` following Next.js App Router conventions
++- **Database Layer**: Prisma ORM with comprehensive schema for ventures, users, GEDSI metrics, documents, activities, and capital activities
++- **AI Services**: Centralized AI service layer in `lib/ai-services.ts` for venture analysis, risk assessment, and GEDSI insights
++- **Authentication**: NextAuth.js integration (currently disabled for development)
++
++### Database Schema Highlights
++
++#### Core Entities
++- **Ventures**: Complete venture lifecycle tracking with stages (INTAKE → SCREENING → DUE_DILIGENCE → INVESTMENT_READY → FUNDED → EXITED)
++- **GEDSIMetric**: IRIS+ compliant metrics with categories (GENDER, DISABILITY, SOCIAL_INCLUSION, CROSS_CUTTING)
++- **Users**: Role-based access (ADMIN, MANAGER, ANALYST, USER) with flexible permissions
++- **Activities**: Comprehensive audit trail for all venture interactions
++- **CapitalActivity**: Investment tracking with multiple types (GRANT, DEBT, EQUITY, CONVERTIBLE_NOTE)
++
++#### Key Relationships
++- Ventures have many GEDSI metrics, documents, activities, and capital activities
++- Users create and are assigned to ventures
++- Activity tracking maintains complete audit trails
++- IRIS+ metric catalog for standardized impact measurement
++
++### Navigation Structure
++The application follows a hierarchical navigation pattern:
++- **Dashboard**: Main analytics and overview
++- **Pipeline Management**: Venture intake, deal flow, due diligence, portfolio
++- **Analytics & Insights**: Performance analytics, AI analysis, advanced reports, custom dashboards
++- **Capital Management**: Capital facilitation, investment rounds, fund management, exit strategy
++- **Impact & GEDSI**: GEDSI tracker, impact reports, sustainability metrics, social impact
++- **Operations**: Team management, document management, calendar, system settings
++
++## Key Development Patterns
++
++### Component Development
++- Use `components/ui/` for base UI components (button, input, card, etc.)
++- Use `components/enterprise/` for complex business logic components
++- Follow the shadcn/ui pattern for consistent styling and accessibility
++- All components are TypeScript with proper prop types
++
++### API Development
++- APIs use Zod schemas for validation (see `app/api/ventures/route.ts`)
++- Follow REST conventions: GET for listing/fetching, POST for creation
++- Include comprehensive error handling and status codes
++- Development mode bypasses authentication for easier testing
++- Async AI analysis happens after main operations to avoid blocking
++
++### Database Operations
++- Always use Prisma client from `lib/prisma.ts`
++- Include relationships in queries when needed for UI display
++- Use transactions for complex multi-table operations
++- Activity logging for all significant venture changes
++
++### AI Integration
++- AI services are centralized in `lib/ai-services.ts`
++- Multiple AI models for different use cases (GPT-4, Claude, Gemini)
++- Async AI analysis to avoid blocking user operations
++- Store AI results as activities for audit trail
++
++## Environment Setup
++
++### Required Environment Variables
++```bash
++# Database
++DATABASE_URL="file:./prisma/dev.db"  # SQLite for development
++
++# AI Services (for AI-powered analysis)
++OPENAI_API_KEY="your-openai-api-key"
++ANTHROPIC_API_KEY="your-anthropic-api-key"
++GOOGLE_AI_API_KEY="your-google-ai-api-key"
++
++# NextAuth (when authentication is enabled)
++NEXTAUTH_URL="http://localhost:3000"
++NEXTAUTH_SECRET="your-nextauth-secret"
++```
++
++### Development Notes
++- Authentication is currently bypassed in development mode
++- Default user is auto-created for venture assignments
++- AI analysis runs asynchronously after venture creation
++- Database uses SQLite for development, PostgreSQL for production
++
++## Important Business Logic
++
++### GEDSI Integration
++- Washington Group Short Set questions for disability inclusion assessment
++- IRIS+ metrics compliance for standardized impact measurement
++- Gender lens investing criteria (2X Challenge compliance)
++- Comprehensive disaggregation by gender, disability, social inclusion
++
++### Venture Pipeline
++- Multi-stage venture progression with automated workflows
++- AI-powered venture screening and risk assessment
++- Document management with automated analysis
++- Capital readiness assessment and investment facilitation
++
++### Impact Measurement
++- Real-time GEDSI metrics tracking
++- Automated compliance monitoring
++- Impact reporting with visualization
++- Sustainability metrics integration
++
++## Migration Planning
++
++The platform is designed for enterprise deployment with:
++- **Database Migration**: SQLite → PostgreSQL with full schema migration
++- **Authentication**: NextAuth.js integration with proper session management
++- **AI Gateway**: Centralized AI service management
++- **Microservices**: Modular service architecture for scalability
++- **Kubernetes**: Container orchestration for production deployment
++
++## File Organization
++
++- `app/` - Next.js App Router pages and API routes
++- `components/` - React components (UI and enterprise)
++- `lib/` - Utility functions, database client, AI services
++- `prisma/` - Database schema, migrations, and seed data
++- `docs/` - Comprehensive documentation and architecture guides
++- `public/` - Static assets
++
++The codebase follows enterprise patterns with comprehensive documentation, type safety, and scalable architecture for venture capital operations.
+\ No newline at end of file
+diff --git a/app/globals.css b/app/globals.css
+index 5e95ad9..f49e327 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -465,4 +465,205 @@ img {
+   height: auto;
+ }
+ 
++/* Accessibility Enhancements */
+ 
++/* High Contrast Mode */
++.high-contrast {
++  --background: #000000;
++  --foreground: #ffffff;
++  --card: #000000;
++  --card-foreground: #ffffff;
++  --primary: #ffffff;
++  --primary-foreground: #000000;
++  --secondary: #333333;
++  --secondary-foreground: #ffffff;
++  --border: #ffffff;
++  --ring: #ffffff;
++}
++
++.high-contrast * {
++  border-color: #ffffff !important;
++  background-color: #000000 !important;
++  color: #ffffff !important;
++}
++
++.high-contrast button,
++.high-contrast .bg-white,
++.high-contrast .bg-blue-600,
++.high-contrast .bg-gray-100 {
++  background-color: #ffffff !important;
++  color: #000000 !important;
++  border: 2px solid #ffffff !important;
++}
++
++.high-contrast .text-white {
++  color: #ffffff !important;
++}
++
++/* Dark Mode Overrides */
++.dark-mode {
++  --background: #0f172a;
++  --foreground: #ededed;
++  --card: #1e293b;
++  --card-foreground: #ededed;
++  --primary: #ffffff;
++  --primary-foreground: #0f172a;
++  --secondary: #334155;
++  --secondary-foreground: #ededed;
++  --border: #475569;
++  --ring: #64748b;
++}
++
++.dark-mode body {
++  background-color: #0f172a;
++  color: #ededed;
++}
++
++.dark-mode .bg-gradient-to-b {
++  background: #0f172a !important;
++}
++
++.dark-mode .bg-transparent {
++  background-color: #0f172a !important;
++}
++
++/* Mission Card - Dark navy background in dark mode */
++.mission-card {
++  background-color: #ffffff;
++}
++
++.dark-mode .mission-card {
++  background-color: #1e293b !important;
++}
++
++.dark-mode .mission-card * {
++  color: #e2e8f0 !important;
++}
++
++.dark-mode .mission-card h3 {
++  color: #f8fafc !important;
++}
++
++.high-contrast .mission-card {
++  background-color: #ffffff !important;
++}
++
++.high-contrast .mission-card *,
++.high-contrast .mission-card h3 {
++  color: #ffffff !important;
++}
++
++/* Pricing Section - Dark navy background in dark mode */
++.dark-mode #pricing {
++  background-color: #1e293b !important;
++}
++
++/* Venture Capital box and other white backgrounds - Dark navy in dark mode */
++.dark-mode .bg-white {
++  background-color: #1e293b !important;
++  color: #e2e8f0 !important;
++}
++
++.dark-mode .bg-white h4 {
++  color: #f8fafc !important;
++}
++
++.dark-mode .bg-white p {
++  color: #cbd5e1 !important;
++}
++
++/* Specific buttons to match Contact Sales darker navy style in dark mode */
++.dark-mode .get-started-btn,
++.dark-mode .learn-more-btn,
++.dark-mode .send-message-btn {
++  background-color: #0f172a !important;
++  border: 1px solid #334155 !important;
++  color: #e2e8f0 !important;
++}
++
++.dark-mode .get-started-btn:hover,
++.dark-mode .learn-more-btn:hover,
++.dark-mode .send-message-btn:hover {
++  background-color: #334155 !important;
++  color: #ffffff !important;
++}
++
++/* All titles white in dark mode except main hero title */
++.dark-mode h1:not(.hero-title),
++.dark-mode h2,
++.dark-mode h3,
++.dark-mode h4,
++.dark-mode h5,
++.dark-mode h6 {
++  color: #ffffff !important;
++}
++
++/* Specific heading classes white in dark mode */
++.dark-mode .text-gray-900 {
++  color: #ffffff !important;
++}
++
++/* Card titles and component titles */
++.dark-mode .text-lg.font-semibold,
++.dark-mode .text-xl.font-semibold,
++.dark-mode .text-2xl.font-bold,
++.dark-mode .text-3xl.font-bold,
++.dark-mode .text-4xl.font-bold {
++  color: #ffffff !important;
++}
++
++/* Preserve hero title gradient - keep it as is */
++.dark-mode .bg-gradient-to-r.from-blue-400.via-purple-400.to-pink-400 {
++  color: transparent !important;
++}
++
++/* Sign In button text - navy color */
++.sign-in-btn {
++  color: #0f172a !important;
++}
++
++.dark-mode .sign-in-btn {
++  color: #0f172a !important;
++}
++
++.sign-in-btn:hover {
++  color: #0f172a !important;
++}
++
++.dark-mode .sign-in-btn:hover {
++  color: #0f172a !important;
++}
++
++/* Contact Sales button  */
++.contact-sales-btn {
++  background-color: #0f172a !important;
++  border: 1px solid #0f172a !important;
++  color: #ffffff !important;
++}
++
++.contact-sales-btn:hover {
++  background-color: #0f172a !important;
++  border: 1px solid #0f172a !important;
++  color: #ffffff !important;
++}
++
++/* Focus indicators for better accessibility */
++button:focus,
++input:focus,
++select:focus,
++textarea:focus {
++  outline: 3px solid #3b82f6;
++  outline-offset: 2px;
++}
++
++/* Reduced motion for users who prefer it */
++@media (prefers-reduced-motion: reduce) {
++  *,
++  *::before,
++  *::after {
++    animation-duration: 0.01ms !important;
++    animation-iteration-count: 1 !important;
++    transition-duration: 0.01ms !important;
++    scroll-behavior: auto !important;
++  }
++}
+\ No newline at end of file
+diff --git a/app/page.tsx b/app/page.tsx
+index 7506cce..4ca977b 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -61,7 +61,9 @@ import {
+   Globe2,
+   Lock,
+   RefreshCw,
+-  Brain
++  Brain,
++  Facebook,
++  Linkedin
+ } from "lucide-react"
+ import { Logo } from "@/components/logo"
+ 
+@@ -70,6 +72,9 @@ export default function HomePage() {
+   const [activeSection, setActiveSection] = useState('hero')
+   const [email, setEmail] = useState('')
+   const [isLoading, setIsLoading] = useState(false)
++  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false)
++  const [fontSize, setFontSize] = useState(16)
++  const [colorScheme, setColorScheme] = useState('default')
+ 
+   // Intersection Observer for smooth scrolling
+   useEffect(() => {
+@@ -90,6 +95,21 @@ export default function HomePage() {
+     return () => observer.disconnect()
+   }, [])
+ 
++  // Apply accessibility settings
++  useEffect(() => {
++    document.documentElement.style.fontSize = `${fontSize}px`
++    
++    // Remove existing theme classes
++    document.documentElement.classList.remove('high-contrast', 'dark-mode')
++    
++    // Apply color scheme
++    if (colorScheme === 'high-contrast') {
++      document.documentElement.classList.add('high-contrast')
++    } else if (colorScheme === 'dark') {
++      document.documentElement.classList.add('dark-mode')
++    }
++  }, [fontSize, colorScheme])
++
+   const handleEmailSubmit = async (e: React.FormEvent) => {
+     e.preventDefault()
+     setIsLoading(true)
+@@ -109,7 +129,7 @@ export default function HomePage() {
+   }
+ 
+   return (
+-    <div className="min-h-screen bg-white text-gray-900">
++    <div className="min-h-screen bg-gradient-to-b from-grey-300 via-[#f4f4f4] to-white text-gray-900">
+       {/* Navigation */}
+       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+@@ -133,6 +153,12 @@ export default function HomePage() {
+               >
+                 Solutions
+               </button>
++              <button 
++                onClick={() => scrollToSection('reviews')}
++                className="text-gray-600 hover:text-gray-900 transition-colors"
++              >
++                Reviews
++              </button>
+               <button 
+                 onClick={() => scrollToSection('pricing')}
+                 className="text-gray-600 hover:text-gray-900 transition-colors"
+@@ -156,13 +182,13 @@ export default function HomePage() {
+             {/* CTA Buttons */}
+             <div className="hidden md:flex items-center space-x-4">
+               <Link href="/auth/login">
+-                <Button variant="ghost" size="sm">
++                <Button variant="ghost" size="sm" className="sign-in-btn">
+                   <LogIn className="h-4 w-4 mr-2" />
+                   Sign In
+                 </Button>
+               </Link>
+               <Link href="/dashboard">
+-                <Button size="sm">
++                <Button size="sm" className="get-started-btn">
+                   <UserPlus className="h-4 w-4 mr-2" />
+                   Get Started
+                 </Button>
+@@ -195,6 +221,12 @@ export default function HomePage() {
+               >
+                 Solutions
+               </button>
++              <button 
++                onClick={() => { scrollToSection('reviews'); setIsMenuOpen(false); }}
++                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
++              >
++                Reviews
++              </button>
+               <button 
+                 onClick={() => { scrollToSection('pricing'); setIsMenuOpen(false); }}
+                 className="block px-3 py-2 text-gray-600 hover:text-gray-900"
+@@ -214,11 +246,11 @@ export default function HomePage() {
+                 Contact
+               </button>
+               <div className="pt-4 space-y-2">
+-                <Button variant="ghost" size="sm" className="w-full">
++                <Button variant="ghost" size="sm" className="w-full sign-in-btn">
+                   <LogIn className="h-4 w-4 mr-2" />
+                   Sign In
+                 </Button>
+-                <Button size="sm" className="w-full">
++                <Button size="sm" className="w-full get-started-btn">
+                   <UserPlus className="h-4 w-4 mr-2" />
+                   Get Started
+                 </Button>
+@@ -228,6 +260,122 @@ export default function HomePage() {
+         )}
+       </nav>
+ 
++      {/* Accessibility Button */}
++      <button
++        onClick={() => setIsAccessibilityOpen(true)}
++        className="fixed top-20 right-4 z-40 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
++        aria-label="Open accessibility settings"
++      >
++        <Settings className="h-5 w-5" />
++      </button>
++
++      {/* Accessibility Side Panel */}
++      {isAccessibilityOpen && (
++        <>
++          {/* Overlay */}
++          <div 
++            className="fixed inset-0 bg-black/50 z-50" 
++            onClick={() => setIsAccessibilityOpen(false)}
++          />
++          
++          {/* Side Panel */}
++          <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform">
++            <div className="p-6">
++              <div className="flex items-center justify-between mb-6">
++                <h2 className="text-xl font-bold text-gray-900">Accessibility Settings</h2>
++                <button
++                  onClick={() => setIsAccessibilityOpen(false)}
++                  className="text-gray-400 hover:text-gray-600"
++                  aria-label="Close accessibility settings"
++                >
++                  <X className="h-6 w-6" />
++                </button>
++              </div>
++              
++              {/* Font Size Control */}
++              <div className="mb-6">
++                <label className="block text-sm font-medium text-gray-700 mb-3">
++                  Font Size
++                </label>
++                <div className="flex items-center space-x-4">
++                  <button
++                    onClick={() => setFontSize(Math.max(12, fontSize - 2))}
++                    className="flex items-center justify-center w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
++                    aria-label="Decrease font size"
++                  >
++                    <span className="text-lg font-bold">A-</span>
++                  </button>
++                  <span className="text-sm text-gray-600 min-w-[60px] text-center">
++                    {fontSize}px
++                  </span>
++                  <button
++                    onClick={() => setFontSize(Math.min(24, fontSize + 2))}
++                    className="flex items-center justify-center w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
++                    aria-label="Increase font size"
++                  >
++                    <span className="text-lg font-bold">A+</span>
++                  </button>
++                </div>
++              </div>
++              
++              {/* Color Scheme Control */}
++              <div className="mb-6">
++                <label className="block text-sm font-medium text-gray-700 mb-3">
++                  Color Scheme
++                </label>
++                <div className="space-y-2">
++                  <label className="flex items-center">
++                    <input
++                      type="radio"
++                      name="colorScheme"
++                      value="default"
++                      checked={colorScheme === 'default'}
++                      onChange={(e) => setColorScheme(e.target.value)}
++                      className="mr-3"
++                    />
++                    <span className="text-sm">Default</span>
++                  </label>
++                  <label className="flex items-center">
++                    <input
++                      type="radio"
++                      name="colorScheme"
++                      value="high-contrast"
++                      checked={colorScheme === 'high-contrast'}
++                      onChange={(e) => setColorScheme(e.target.value)}
++                      className="mr-3"
++                    />
++                    <span className="text-sm">High Contrast</span>
++                  </label>
++                  <label className="flex items-center">
++                    <input
++                      type="radio"
++                      name="colorScheme"
++                      value="dark"
++                      checked={colorScheme === 'dark'}
++                      onChange={(e) => setColorScheme(e.target.value)}
++                      className="mr-3"
++                    />
++                    <span className="text-sm">Dark Mode</span>
++                  </label>
++                </div>
++              </div>
++              
++              {/* Reset Button */}
++              <Button 
++                onClick={() => {
++                  setFontSize(16)
++                  setColorScheme('default')
++                }}
++                variant="outline" 
++                className="w-full"
++              >
++                Reset to Default
++              </Button>
++            </div>
++          </div>
++        </>
++      )}
++
+             {/* Hero Section */}
+       <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+         {/* Animated Background Elements */}
+@@ -245,7 +393,7 @@ export default function HomePage() {
+         </div>
+ 
+         {/* Main Content */}
+-        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 text-center">
++        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 text-center pb-20">
+           {/* Status Badge */}
+           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-white/90 font-medium mb-8">
+             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+@@ -255,19 +403,28 @@ export default function HomePage() {
+           </div>
+ 
+           {/* Main Headline */}
+-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+-            <span className="block">The Future of</span>
+-            <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+-              Venture Intelligence
++          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 mt-16 leading-relaxed text-center hero-title">
++            <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent py-2">
++              Mekong Inclusive Ventures
+             </span>
+           </h1>
+ 
+           {/* Subtitle */}
+-          <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+-            Unlock the power of AI-driven venture management. From deal sourcing to exit strategies, 
+-            MIV provides the intelligence you need to make data-driven investment decisions.
++          <p className="text-xl md:text-1xl text-slate-300 mb-24 max-w-4xl mx-auto leading-relaxed text-center">
++            Your central hub for managing your venture's growth — from diagnostics to readiness, GEDSI compliance, and capital facilitation — all in one place.
+           </p>
+ 
++          {/* What is this platform section */}
++          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8 max-w-4xl mx-auto text-center">
++            <h3 className="text-2xl font-bold text-white mb-4">What is this platform?</h3>
++            <p className="text-slate-300 leading-relaxed">
++              MIV is here to help your impact venture grow, guiding you through preparations for funding, tracking your progress, and centralising your venture data to one powerful platform! Our services include GEDSI compliance tracking, readiness assessments, and streamlined capital facilitation, to help you secure the resources you need.
++            </p>
++          </div>
++
++          {/* Small Gap */}
++          <div className="h-10"></div>
++
+           {/* Key Features Grid */}
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
+             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+@@ -295,20 +452,6 @@ export default function HomePage() {
+             </div>
+           </div>
+ 
+-          {/* CTA Buttons */}
+-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+-            <Link href="/dashboard">
+-              <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-2xl font-semibold px-8 py-4 text-lg transform hover:scale-105 transition-all duration-200">
+-                <Rocket className="mr-2 h-5 w-5" />
+-                Get Started Free
+-                <ArrowRight className="ml-2 h-5 w-5" />
+-              </Button>
+-            </Link>
+-            <Button size="lg" className="bg-white/10 text-white hover:bg-white/20 font-semibold px-8 py-4 text-lg border border-white/30 backdrop-blur-md transform hover:scale-105 transition-all duration-200">
+-              <Play className="mr-2 h-5 w-5" />
+-              Watch Demo
+-            </Button>
+-          </div>
+ 
+           {/* Trust Indicators */}
+           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-slate-400">
+@@ -327,28 +470,12 @@ export default function HomePage() {
+           </div>
+         </div>
+ 
+-        {/* Floating Platform Preview */}
+-        <div className="absolute bottom-8 right-8 hidden lg:block">
+-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-2xl transform hover:scale-105 transition-all duration-300">
+-            <div className="flex items-center justify-between mb-4">
+-              <div className="flex items-center space-x-2">
+-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+-              </div>
+-              <span className="text-white/60 text-xs">MIV Dashboard</span>
+-            </div>
+-            <div className="space-y-2">
+-              <div className="h-2 bg-white/20 rounded-full"></div>
+-              <div className="h-2 bg-white/20 rounded-full w-3/4"></div>
+-              <div className="h-2 bg-white/20 rounded-full w-1/2"></div>
+-            </div>
+-          </div>
+-        </div>
+       </section>
+ 
+-      {/* Features Section */}
+-      <section id="features" className="py-20 bg-white">
++      {/* Content sections with transparent backgrounds */}
++      <div>
++        {/* Features Section */}
++        <section id="features" className="py-20 bg-transparent">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="text-center mb-16">
+             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+@@ -436,8 +563,13 @@ export default function HomePage() {
+         </div>
+       </section>
+ 
+-      {/* Solutions Section */}
+-      <section id="solutions" className="py-20 bg-gray-50">
++        {/* Section Separator */}
++        <div className="flex justify-center py-8">
++          <div className="w-1/2 h-px bg-gray-300"></div>
++        </div>
++
++        {/* Solutions Section */}
++        <section id="solutions" className="py-20 bg-transparent">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="text-center mb-16">
+             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+@@ -479,15 +611,105 @@ export default function HomePage() {
+                 </div>
+                 <h4 className="text-xl font-semibold mb-2">Venture Capital</h4>
+                 <p className="text-gray-600 mb-4">Perfect for funds managing $10M - $100M</p>
+-                <Button>Learn More</Button>
++                <Button className="learn-more-btn">Learn More</Button>
+               </div>
+             </div>
+           </div>
+         </div>
+-      </section>
++        </section>
++
++        {/* Section Separator */}
++        <div className="flex justify-center py-8">
++          <div className="w-1/2 h-px bg-gray-300"></div>
++        </div>
++
++        {/* Latest Reviews Section */}
++        <section id="reviews" className="py-20 bg-transparent">
++        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
++          <div className="text-center mb-16">
++            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
++              Latest Reviews
++            </h2>
++          </div>
++
++          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
++            {/* Review 1 */}
++            <Card className="border-0 shadow-md">
++              <CardContent className="pt-6">
++                <div className="flex mb-4">
++                  {[...Array(5)].map((_, i) => (
++                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
++                  ))}
++                </div>
++                <h3 className="text-lg font-semibold text-gray-900 mb-3">Transformative Platform</h3>
++                <p className="text-gray-600 text-sm leading-relaxed mb-4">
++                  MIV has completely revolutionized how we manage our venture pipeline. The GEDSI tracking capabilities alone have saved us countless hours and improved our impact reporting significantly.
++                </p>
++                <div className="flex items-center">
++                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-3">
++                    S
++                  </div>
++                  <div>
++                    <div className="text-sm font-medium text-gray-900">Sarah Johnson</div>
++                    <div className="text-xs text-gray-500">Impact Investment Director</div>
++                  </div>
++                </div>
++              </CardContent>
++            </Card>
++
++            {/* Review 2 */}
++            <Card className="border-0 shadow-md">
++              <CardContent className="pt-6">
++                <div className="flex mb-4">
++                  {[...Array(5)].map((_, i) => (
++                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
++                  ))}
++                </div>
++                <h3 className="text-lg font-semibold text-gray-900 mb-3">Excellent Analytics</h3>
++                <p className="text-gray-600 text-sm leading-relaxed mb-4">
++                  The AI-powered insights have helped us identify promising ventures we might have otherwise overlooked. The platform is intuitive and the support team is incredibly responsive.
++                </p>
++                <div className="flex items-center">
++                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold mr-3">
++                    M
++                  </div>
++                  <div>
++                    <div className="text-sm font-medium text-gray-900">Michael Chen</div>
++                    <div className="text-xs text-gray-500">Senior Investment Analyst</div>
++                  </div>
++                </div>
++              </CardContent>
++            </Card>
++
++            {/* Review 3 */}
++            <Card className="border-0 shadow-md">
++              <CardContent className="pt-6">
++                <div className="flex mb-4">
++                  {[...Array(5)].map((_, i) => (
++                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
++                  ))}
++                </div>
++                <h3 className="text-lg font-semibold text-gray-900 mb-3">Game Changer for Impact Investing</h3>
++                <p className="text-gray-600 text-sm leading-relaxed mb-4">
++                  As a fund focused on sustainable development in Southeast Asia, MIV has been indispensable. The capital facilitation features streamlined our investment process significantly.
++                </p>
++                <div className="flex items-center">
++                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold mr-3">
++                    A
++                  </div>
++                  <div>
++                    <div className="text-sm font-medium text-gray-900">Aisha Rahman</div>
++                    <div className="text-xs text-gray-500">Fund Managing Partner</div>
++                  </div>
++                </div>
++              </CardContent>
++            </Card>
++          </div>
++        </div>
++        </section>
+ 
+-      {/* Pricing Section */}
+-      <section id="pricing" className="py-20 bg-white">
++        {/* Pricing Section */}
++        <section id="pricing" className="py-20 bg-[#ededef]">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="text-center mb-16">
+             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+@@ -521,7 +743,7 @@ export default function HomePage() {
+                     Email support
+                   </li>
+                 </ul>
+-                <Button className="w-full">Get Started</Button>
++                <Button className="w-full get-started-btn">Get Started</Button>
+               </CardContent>
+             </Card>
+ 
+@@ -554,7 +776,7 @@ export default function HomePage() {
+                     Advanced reporting
+                   </li>
+                 </ul>
+-                <Button className="w-full">Get Started</Button>
++                <Button className="w-full get-started-btn">Get Started</Button>
+               </CardContent>
+             </Card>
+ 
+@@ -584,15 +806,15 @@ export default function HomePage() {
+                     White-label options
+                   </li>
+                 </ul>
+-                <Button variant="outline" className="w-full">Contact Sales</Button>
++                <Button variant="outline" className="w-full contact-sales-btn">Contact Sales</Button>
+               </CardContent>
+             </Card>
+           </div>
+         </div>
+       </section>
+ 
+-      {/* About Section */}
+-      <section id="about" className="py-20 bg-gray-50">
++        {/* About Section */}
++        <section id="about" className="py-20 bg-transparent">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+             <div>
+@@ -621,23 +843,23 @@ export default function HomePage() {
+                 </div>
+               </div>
+             </div>
+-            <div className="bg-white p-8 rounded-2xl shadow-lg">
+-              <h3 className="text-xl font-semibold mb-4">Our Mission</h3>
++            <div className="bg-white p-8 rounded-2xl shadow-lg mission-card">
++              <h3 className="text-xl font-semibold mb-4 text-gray-900">Our Mission</h3>
+               <p className="text-gray-600 mb-6">
+                 To democratize access to venture capital and create sustainable impact through technology-driven investment management.
+               </p>
+               <div className="space-y-4">
+                 <div className="flex items-center">
+                   <Target className="h-5 w-5 text-blue-500 mr-3" />
+-                  <span>Inclusive Investment</span>
++                  <span className="text-gray-700">Inclusive Investment</span>
+                 </div>
+                 <div className="flex items-center">
+                   <Globe className="h-5 w-5 text-green-500 mr-3" />
+-                  <span>Sustainable Growth</span>
++                  <span className="text-gray-700">Sustainable Growth</span>
+                 </div>
+                 <div className="flex items-center">
+                   <Users className="h-5 w-5 text-purple-500 mr-3" />
+-                  <span>Community Impact</span>
++                  <span className="text-gray-700">Community Impact</span>
+                 </div>
+               </div>
+             </div>
+@@ -645,8 +867,13 @@ export default function HomePage() {
+         </div>
+       </section>
+ 
+-      {/* Contact Section */}
+-      <section id="contact" className="py-20 bg-white">
++        {/* Section Separator */}
++        <div className="flex justify-center py-8">
++          <div className="w-1/2 h-px bg-gray-300"></div>
++        </div>
++
++        {/* Contact Section */}
++        <section id="contact" className="py-20 bg-transparent">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="text-center mb-16">
+             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+@@ -688,63 +915,77 @@ export default function HomePage() {
+                   rows={4}
+                   placeholder="Message"
+                 />
+-                <Button className="w-full">Send Message</Button>
++                <Button className="w-full send-message-btn">Send Message</Button>
+               </form>
+             </div>
+           </div>
+         </div>
+-      </section>
++        </section>
++      </div>
+ 
+       {/* Footer */}
+       <footer className="bg-gray-900 text-white py-12">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
++          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+             <div>
+               <div className="flex items-center mb-4">
+                 <Logo />
+-                <span className="ml-2 text-xl font-bold">MIV</span>
+               </div>
+               <p className="text-gray-400 mb-4">
+-                Empowering inclusive ventures across Southeast Asia through innovative pipeline management.
++                Empowering inclusive ventures across Southeast <br /> Asia through innovative pipeline management.
+               </p>
+               <div className="flex space-x-4">
+-                <a href="#" className="text-gray-400 hover:text-white">
+-                  <Globe className="h-5 w-5" />
+-                </a>
+-                <a href="#" className="text-gray-400 hover:text-white">
+-                  <MessageCircle className="h-5 w-5" />
++                <a 
++                  href="https://www.facebook.com/MekongInclusiveVentures/" 
++                  target="_blank" 
++                  rel="noopener noreferrer" 
++                  className="text-gray-400 hover:text-white transition-colors"
++                >
++                  <Facebook className="h-5 w-5" />
+                 </a>
+-                <a href="#" className="text-gray-400 hover:text-white">
+-                  <Users className="h-5 w-5" />
++                <a 
++                  href="https://www.linkedin.com/company/mekong-inclusive-ventures/?originalSubdomain=kh" 
++                  target="_blank" 
++                  rel="noopener noreferrer" 
++                  className="text-gray-400 hover:text-white transition-colors"
++                >
++                  <Linkedin className="h-5 w-5" />
+                 </a>
+               </div>
+             </div>
+             <div>
+-              <h4 className="font-semibold mb-4">Product</h4>
+-              <ul className="space-y-2 text-gray-400">
+-                <li><a href="#" className="hover:text-white">Features</a></li>
+-                <li><a href="#" className="hover:text-white">Pricing</a></li>
+-                <li><a href="#" className="hover:text-white">API</a></li>
+-                <li><a href="#" className="hover:text-white">Integrations</a></li>
+-              </ul>
+-            </div>
+-            <div>
+-              <h4 className="font-semibold mb-4">Company</h4>
+-              <ul className="space-y-2 text-gray-400">
+-                <li><a href="#" className="hover:text-white">About</a></li>
+-                <li><a href="#" className="hover:text-white">Blog</a></li>
+-                <li><a href="#" className="hover:text-white">Careers</a></li>
+-                <li><a href="#" className="hover:text-white">Press</a></li>
+-              </ul>
++              <h4 className="font-semibold mb-4">Contact Details</h4>
++              <div className="text-gray-400 space-y-2">
++                <p className="leading-relaxed">
++                  #1381, National Road 2, Phum Tuol Roka,<br />
++                  Sangkat Chat Angre Krom,<br />
++                  Khan Meanchey Phnom Penh,<br />
++                  Cambodia
++                </p>
++              </div>
+             </div>
+             <div>
+-              <h4 className="font-semibold mb-4">Support</h4>
+-              <ul className="space-y-2 text-gray-400">
+-                <li><a href="#" className="hover:text-white">Help Center</a></li>
+-                <li><a href="#" className="hover:text-white">Contact</a></li>
+-                <li><a href="#" className="hover:text-white">Status</a></li>
+-                <li><a href="#" className="hover:text-white">Security</a></li>
+-              </ul>
++              <h4 className="font-semibold mb-4">Phone Numbers</h4>
++              <div className="space-y-2 text-gray-400">
++                <div className="flex items-center">
++                  <Phone className="h-4 w-4 mr-2" />
++                  <a href="tel:+85517350544" className="hover:text-white transition-colors">
++                    +855 17 350 544
++                  </a>
++                </div>
++                <div className="flex items-center">
++                  <Phone className="h-4 w-4 mr-2" />
++                  <a href="tel:+85516708848" className="hover:text-white transition-colors">
++                    +855 16 708 848
++                  </a>
++                </div>
++                <div className="flex items-center">
++                  <Phone className="h-4 w-4 mr-2" />
++                  <a href="tel:+85588733492" className="hover:text-white transition-colors">
++                    +855 88 733 4902
++                  </a>
++                </div>
++              </div>
+             </div>
+           </div>
+           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+diff --git a/package-lock.json b/package-lock.json
+index 00ae230..6649112 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1408,7 +1408,7 @@
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/@prisma/config/-/config-6.14.0.tgz",
+       "integrity": "sha512-IwC7o5KNNGhmblLs23swnfBjADkacBb7wvyDXUWLwuvUQciKJZqyecU0jw0d7JRkswrj+XTL8fdr0y2/VerKQQ==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "c12": "3.1.0",
+         "deepmerge-ts": "7.1.5",
+@@ -1420,13 +1420,13 @@
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/@prisma/debug/-/debug-6.14.0.tgz",
+       "integrity": "sha512-j4Lf+y+5QIJgQD4sJWSbkOD7geKx9CakaLp/TyTy/UDu9Wo0awvWCBH/BAxTHUaCpIl9USA5VS/KJhDqKJSwug==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/@prisma/engines": {
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/@prisma/engines/-/engines-6.14.0.tgz",
+       "integrity": "sha512-LhJjqsALFEcoAtF07nSaOkVguaxw/ZsgfROIYZ8bAZDobe7y8Wy+PkYQaPOK1iLSsFgV2MhCO/eNrI1gdSOj6w==",
+-      "dev": true,
++      "devOptional": true,
+       "hasInstallScript": true,
+       "dependencies": {
+         "@prisma/debug": "6.14.0",
+@@ -1439,13 +1439,13 @@
+       "version": "6.14.0-25.717184b7b35ea05dfa71a3236b7af656013e1e49",
+       "resolved": "https://registry.npmjs.org/@prisma/engines-version/-/engines-version-6.14.0-25.717184b7b35ea05dfa71a3236b7af656013e1e49.tgz",
+       "integrity": "sha512-EgN9ODJpiX45yvwcngoStp3uQPJ3l+AEVoQ6dMMO2QvmwIlnxfApzKmJQExzdo7/hqQANrz5txHJdGYHzOnGHA==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/@prisma/fetch-engine": {
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/@prisma/fetch-engine/-/fetch-engine-6.14.0.tgz",
+       "integrity": "sha512-MPzYPOKMENYOaY3AcAbaKrfvXVlvTc6iHmTXsp9RiwCX+bPyfDMqMFVUSVXPYrXnrvEzhGHfyiFy0PRLHPysNg==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "@prisma/debug": "6.14.0",
+         "@prisma/engines-version": "6.14.0-25.717184b7b35ea05dfa71a3236b7af656013e1e49",
+@@ -1456,7 +1456,7 @@
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/@prisma/get-platform/-/get-platform-6.14.0.tgz",
+       "integrity": "sha512-7VjuxKNwjnBhKfqPpMeWiHEa2sVjYzmHdl1slW6STuUCe9QnOY0OY1ljGSvz6wpG4U8DfbDqkG1yofd/1GINww==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "@prisma/debug": "6.14.0"
+       }
+@@ -2397,7 +2397,7 @@
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.0.0.tgz",
+       "integrity": "sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/@standard-schema/utils": {
+       "version": "0.3.0",
+@@ -2804,7 +2804,7 @@
+       "version": "19.1.10",
+       "resolved": "https://registry.npmjs.org/@types/react/-/react-19.1.10.tgz",
+       "integrity": "sha512-EhBeSYX0Y6ye8pNebpKrwFJq7BoQ8J5SO6NlvNwwHjSj6adXJViPQrKlsyPw7hLBLvckEMO1yxeGdR82YBBlDg==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "csstype": "^3.0.2"
+       }
+@@ -2813,7 +2813,7 @@
+       "version": "19.1.7",
+       "resolved": "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.7.tgz",
+       "integrity": "sha512-i5ZzwYpqjmrKenzkoLM2Ibzt6mAsM7pxB6BCIouEVVmgiqaMj1TjaK7hnA36hbW5aZv20kx7Lw6hWzPWg0Rurw==",
+-      "dev": true,
++      "devOptional": true,
+       "peerDependencies": {
+         "@types/react": "^19.0.0"
+       }
+@@ -3662,7 +3662,7 @@
+       "version": "3.1.0",
+       "resolved": "https://registry.npmjs.org/c12/-/c12-3.1.0.tgz",
+       "integrity": "sha512-uWoS8OU1MEIsOv8p/5a82c3H31LsWVR5qiyXVfBNOzfffjUWtPnhAb4BYI2uG2HfGmZmFjCtui5XNWaps+iFuw==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "chokidar": "^4.0.3",
+         "confbox": "^0.2.2",
+@@ -3690,7 +3690,7 @@
+       "version": "16.6.1",
+       "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-16.6.1.tgz",
+       "integrity": "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==",
+-      "dev": true,
++      "devOptional": true,
+       "engines": {
+         "node": ">=12"
+       },
+@@ -3793,7 +3793,7 @@
+       "version": "4.0.3",
+       "resolved": "https://registry.npmjs.org/chokidar/-/chokidar-4.0.3.tgz",
+       "integrity": "sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "readdirp": "^4.0.1"
+       },
+@@ -3817,7 +3817,7 @@
+       "version": "0.1.6",
+       "resolved": "https://registry.npmjs.org/citty/-/citty-0.1.6.tgz",
+       "integrity": "sha512-tskPPKEs8D2KPafUypv2gxwJP8h/OaJmC82QQGGDQcHvXX43xF2VDACcJVmZ0EuSxkpO9Kc4MlrA3q0+FG58AQ==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "consola": "^3.2.3"
+       }
+@@ -3897,13 +3897,13 @@
+       "version": "0.2.2",
+       "resolved": "https://registry.npmjs.org/confbox/-/confbox-0.2.2.tgz",
+       "integrity": "sha512-1NB+BKqhtNipMsov4xI/NnhCKp9XG9NamYp5PVm9klAT0fsrNPjaFICsCFhNhwZJKNh7zB/3q8qXz0E9oaMNtQ==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/consola": {
+       "version": "3.4.2",
+       "resolved": "https://registry.npmjs.org/consola/-/consola-3.4.2.tgz",
+       "integrity": "sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==",
+-      "dev": true,
++      "devOptional": true,
+       "engines": {
+         "node": "^14.18.0 || >=16.10.0"
+       }
+@@ -4143,7 +4143,7 @@
+       "version": "7.1.5",
+       "resolved": "https://registry.npmjs.org/deepmerge-ts/-/deepmerge-ts-7.1.5.tgz",
+       "integrity": "sha512-HOJkrhaYsweh+W+e74Yn7YStZOilkoPb6fycpwNLKzSPtruFs48nYis0zy5yJz1+ktUhHxoRDJ27RQAWLIJVJw==",
+-      "dev": true,
++      "devOptional": true,
+       "engines": {
+         "node": ">=16.0.0"
+       }
+@@ -4186,13 +4186,13 @@
+       "version": "6.1.4",
+       "resolved": "https://registry.npmjs.org/defu/-/defu-6.1.4.tgz",
+       "integrity": "sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/destr": {
+       "version": "2.0.5",
+       "resolved": "https://registry.npmjs.org/destr/-/destr-2.0.5.tgz",
+       "integrity": "sha512-ugFTXCtDZunbzasqBxrK93Ik/DRYsO6S/fedkWEMKqt04xZ4csmnmwGDBAb07QWNaGMAmnTIemsYZCksjATwsA==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/detect-libc": {
+       "version": "2.0.4",
+@@ -4258,7 +4258,7 @@
+       "version": "3.16.12",
+       "resolved": "https://registry.npmjs.org/effect/-/effect-3.16.12.tgz",
+       "integrity": "sha512-N39iBk0K71F9nb442TLbTkjl24FLUzuvx2i1I2RsEAQsdAdUTuUoW0vlfUXgkMTUOnYqKnWcFfqw4hK4Pw27hg==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "@standard-schema/spec": "^1.0.0",
+         "fast-check": "^3.23.1"
+@@ -4274,7 +4274,7 @@
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/empathic/-/empathic-2.0.0.tgz",
+       "integrity": "sha512-i6UzDscO/XfAcNYD75CfICkmfLedpyPDdozrLMmQc5ORaQcdMoc21OnlEylMIqI7U8eniKrPMxxtj8k0vhmJhA==",
+-      "dev": true,
++      "devOptional": true,
+       "engines": {
+         "node": ">=14"
+       }
+@@ -4927,13 +4927,13 @@
+       "version": "1.0.7",
+       "resolved": "https://registry.npmjs.org/exsolve/-/exsolve-1.0.7.tgz",
+       "integrity": "sha512-VO5fQUzZtI6C+vx4w/4BWJpg3s/5l+6pRQEHzFRM8WFi4XffSP1Z+4qi7GbjWbvRQEbdIco5mIMq+zX4rPuLrw==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/fast-check": {
+       "version": "3.23.2",
+       "resolved": "https://registry.npmjs.org/fast-check/-/fast-check-3.23.2.tgz",
+       "integrity": "sha512-h5+1OzzfCC3Ef7VbtKdcv7zsstUQwUDlYpUTvjeUsJAssPgLn7QzbboPtL5ro04Mq0rPOsMzl7q5hIbRs2wD1A==",
+-      "dev": true,
++      "devOptional": true,
+       "funding": [
+         {
+           "type": "individual",
+@@ -5235,7 +5235,7 @@
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/giget/-/giget-2.0.0.tgz",
+       "integrity": "sha512-L5bGsVkxJbJgdnwyuheIunkGatUF/zssUoxxjACCseZYAVbaqdh9Tsmmlkl8vYan09H7sbvKt4pS8GqKLBrEzA==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "citty": "^0.1.6",
+         "consola": "^3.4.0",
+@@ -5869,7 +5869,7 @@
+       "version": "2.5.1",
+       "resolved": "https://registry.npmjs.org/jiti/-/jiti-2.5.1.tgz",
+       "integrity": "sha512-twQoecYPiVA5K/h6SxtORw/Bs3ar+mLUtoPSc7iMXzQzK8d7eJ/R09wmTwAjiamETn1cXYPGfNnu7DMoHgu12w==",
+-      "dev": true,
++      "devOptional": true,
+       "bin": {
+         "jiti": "lib/jiti-cli.mjs"
+       }
+@@ -6308,6 +6308,19 @@
+         "node": ">=8.6"
+       }
+     },
++    "node_modules/micromatch/node_modules/picomatch": {
++      "version": "2.3.1",
++      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-2.3.1.tgz",
++      "integrity": "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8.6"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/jonschlinkert"
++      }
++    },
+     "node_modules/minimatch": {
+       "version": "3.1.2",
+       "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-3.1.2.tgz",
+@@ -6524,13 +6537,13 @@
+       "version": "1.6.7",
+       "resolved": "https://registry.npmjs.org/node-fetch-native/-/node-fetch-native-1.6.7.tgz",
+       "integrity": "sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/nypm": {
+       "version": "0.6.1",
+       "resolved": "https://registry.npmjs.org/nypm/-/nypm-0.6.1.tgz",
+       "integrity": "sha512-hlacBiRiv1k9hZFiphPUkfSQ/ZfQzZDzC+8z0wL3lvDAOUu/2NnChkKuMoMjNur/9OpKuz2QsIeiPVN0xM5Q0w==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "citty": "^0.1.6",
+         "consola": "^3.4.2",
+@@ -6676,7 +6689,7 @@
+       "version": "2.0.11",
+       "resolved": "https://registry.npmjs.org/ohash/-/ohash-2.0.11.tgz",
+       "integrity": "sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/oidc-token-hash": {
+       "version": "5.1.1",
+@@ -6824,13 +6837,13 @@
+       "version": "2.0.3",
+       "resolved": "https://registry.npmjs.org/pathe/-/pathe-2.0.3.tgz",
+       "integrity": "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/perfect-debounce": {
+       "version": "1.0.0",
+       "resolved": "https://registry.npmjs.org/perfect-debounce/-/perfect-debounce-1.0.0.tgz",
+       "integrity": "sha512-xCy9V055GLEqoFaHoC1SoLIaLmWctgCUaBaWxDZ7/Zx4CTyX7cJQLJOok/orfjZAh9kEYpjJa4d0KcJmCbctZA==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/picocolors": {
+       "version": "1.1.1",
+@@ -6838,12 +6851,13 @@
+       "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="
+     },
+     "node_modules/picomatch": {
+-      "version": "2.3.1",
+-      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-2.3.1.tgz",
+-      "integrity": "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==",
++      "version": "4.0.3",
++      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.3.tgz",
++      "integrity": "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==",
+       "dev": true,
++      "license": "MIT",
+       "engines": {
+-        "node": ">=8.6"
++        "node": ">=12"
+       },
+       "funding": {
+         "url": "https://github.com/sponsors/jonschlinkert"
+@@ -6853,7 +6867,7 @@
+       "version": "2.3.0",
+       "resolved": "https://registry.npmjs.org/pkg-types/-/pkg-types-2.3.0.tgz",
+       "integrity": "sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "confbox": "^0.2.2",
+         "exsolve": "^1.0.7",
+@@ -6935,7 +6949,7 @@
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/prisma/-/prisma-6.14.0.tgz",
+       "integrity": "sha512-QEuCwxu+Uq9BffFw7in8In+WfbSUN0ewnaSUKloLkbJd42w6EyFckux4M0f7VwwHlM3A8ssaz4OyniCXlsn0WA==",
+-      "dev": true,
++      "devOptional": true,
+       "hasInstallScript": true,
+       "dependencies": {
+         "@prisma/config": "6.14.0",
+@@ -6979,7 +6993,7 @@
+       "version": "6.1.0",
+       "resolved": "https://registry.npmjs.org/pure-rand/-/pure-rand-6.1.0.tgz",
+       "integrity": "sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==",
+-      "dev": true,
++      "devOptional": true,
+       "funding": [
+         {
+           "type": "individual",
+@@ -7015,7 +7029,7 @@
+       "version": "2.1.2",
+       "resolved": "https://registry.npmjs.org/rc9/-/rc9-2.1.2.tgz",
+       "integrity": "sha512-btXCnMmRIBINM2LDZoEmOogIZU7Qe7zn4BpomSKZ/ykbLObuBdvG+mFq11DL6fjH1DRwHhrlgtYWG96bJiC7Cg==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "defu": "^6.1.4",
+         "destr": "^2.0.3"
+@@ -7159,7 +7173,7 @@
+       "version": "4.1.2",
+       "resolved": "https://registry.npmjs.org/readdirp/-/readdirp-4.1.2.tgz",
+       "integrity": "sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==",
+-      "dev": true,
++      "devOptional": true,
+       "engines": {
+         "node": ">= 14.18.0"
+       },
+@@ -7793,8 +7807,7 @@
+     "node_modules/tailwindcss": {
+       "version": "4.1.12",
+       "resolved": "https://registry.npmjs.org/tailwindcss/-/tailwindcss-4.1.12.tgz",
+-      "integrity": "sha512-DzFtxOi+7NsFf7DBtI3BJsynR+0Yp6etH+nRPTbpWnS2pZBaSksv/JGctNwSWzbFjp0vxSqknaUylseZqMDGrA==",
+-      "dev": true
++      "integrity": "sha512-DzFtxOi+7NsFf7DBtI3BJsynR+0Yp6etH+nRPTbpWnS2pZBaSksv/JGctNwSWzbFjp0vxSqknaUylseZqMDGrA=="
+     },
+     "node_modules/tailwindcss-animate": {
+       "version": "1.0.7",
+@@ -7848,7 +7861,7 @@
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/tinyexec/-/tinyexec-1.0.1.tgz",
+       "integrity": "sha512-5uC6DDlmeqiOwCPmK9jMSdOuZTh8bU39Ys6yidB+UTt5hfZUPGAypSgFRiEp+jbi9qH40BLDvy85jIU88wKSqw==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/tinyglobby": {
+       "version": "0.2.14",
+@@ -7866,18 +7879,6 @@
+         "url": "https://github.com/sponsors/SuperchupuDev"
+       }
+     },
+-    "node_modules/tinyglobby/node_modules/picomatch": {
+-      "version": "4.0.3",
+-      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.3.tgz",
+-      "integrity": "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==",
+-      "dev": true,
+-      "engines": {
+-        "node": ">=12"
+-      },
+-      "funding": {
+-        "url": "https://github.com/sponsors/jonschlinkert"
+-      }
+-    },
+     "node_modules/to-regex-range": {
+       "version": "5.0.1",
+       "resolved": "https://registry.npmjs.org/to-regex-range/-/to-regex-range-5.0.1.tgz",
+@@ -8028,7 +8029,7 @@
+       "version": "5.9.2",
+       "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.2.tgz",
+       "integrity": "sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==",
+-      "dev": true,
++      "devOptional": true,
+       "bin": {
+         "tsc": "bin/tsc",
+         "tsserver": "bin/tsserver"
