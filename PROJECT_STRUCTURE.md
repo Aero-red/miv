@@ -86,17 +86,22 @@ miv/
 │   ├── schema.prisma                # Database Schema
 │   └── seed.ts                      # Database Seeding
 │
+├── 📁 public/                       # Static assets
+├── 📁 scripts/                      # Dev and maintenance scripts
+├── 📁 experiments/                  # Experiment diffs and metadata
+├── 📁 types/                        # Type augmentations and declarations
 ├── .gitignore                       # Git Ignore Rules
 ├── components.json                  # shadcn/ui Configuration
-├── eslint.config.mjs               # ESLint Configuration
-├── next-env.d.ts                   # Next.js Types
-├── next.config.ts                  # Next.js Configuration
-├── package.json                    # Dependencies & Scripts
-├── package-lock.json               # Locked Dependencies
-├── postcss.config.mjs              # PostCSS Configuration
-├── README.md                       # Project Documentation
-├── tailwind.config.ts              # Tailwind CSS Configuration
-└── tsconfig.json                   # TypeScript Configuration
+├── eslint.config.mjs                # ESLint Configuration
+├── next-env.d.ts                    # Next.js Types
+├── next.config.ts                   # Next.js Configuration
+├── next.config.mjs                  # Next.js Configuration (additional)
+├── package.json                     # Dependencies & Scripts
+├── package-lock.json                # Locked Dependencies
+├── postcss.config.mjs               # PostCSS Configuration
+├── README.md                        # Project Documentation
+├── tailwind.config.ts               # Tailwind CSS Configuration
+└── tsconfig.json                    # TypeScript Configuration
 ```
 
 ## 🗑️ **Removed Files & Directories**
@@ -137,10 +142,10 @@ miv/
 
 ## 📊 **File Count Summary**
 
-- **Total Files**: ~150 files
-- **Source Code**: ~80 files
-- **Documentation**: 7 files
-- **Configuration**: 8 files
+- **Total Files**: 236 files
+- **Source Code**: 171 files
+- **Documentation**: 23 files
+- **Configuration**: 9 files
 - **Dependencies**: 1 file (package-lock.json)
 
 ## ✅ **Benefits of Organization**
