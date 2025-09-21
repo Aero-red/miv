@@ -1,0 +1,651 @@
+{
+  "info": {
+    "name": "MIV Platform - Core API",
+    "description": "Complete API testing suite for MIV Platform",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_user_email}}\",\n  \"password\": \"{{test_user_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/signin",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "signin"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Session cookie set\", function () {",
+                  "    const sessionCookie = pm.cookies.get('next-auth.session-token');",
+                  "    if (sessionCookie) {",
+                  "        pm.environment.set('session_token', sessionCookie);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "session"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Session valid\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('user');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ventures API",
+      "item": [
+        {
+          "name": "List Ventures",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventures?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"List ventures successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Response time acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Venture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{test_venture_name}}\",\n  \"sector\": \"FinTech\",\n  \"location\": \"San Francisco, CA\",\n  \"contactEmail\": \"test@venture.com\",\n  \"founderTypes\": \"[\\\"women-led\\\"]\",\n  \"teamSize\": 5,\n  \"description\": \"Test venture for API validation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ventures",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Create venture successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.environment.set('venture_id', responseJson.id);",
+                  "});",
+                  "",
+                  "pm.test(\"Venture data validation\", function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.name).to.eql(pm.environment.get('test_venture_name'));",
+                  "    pm.expect(responseJson.sector).to.eql('FinTech');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Venture",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventures/{{venture_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures", "{{venture_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Get venture successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id', pm.environment.get('venture_id'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Venture",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Test Venture\",\n  \"teamSize\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ventures/{{venture_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures", "{{venture_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Update venture successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.name).to.eql('Updated Test Venture');",
+                  "    pm.expect(responseJson.teamSize).to.eql(10);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GEDSI Metrics API",
+      "item": [
+        {
+          "name": "List GEDSI Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/gedsi-metrics?ventureId={{venture_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "gedsi-metrics"],
+              "query": [
+                {
+                  "key": "ventureId",
+                  "value": "{{venture_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"List GEDSI metrics successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('metrics');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create GEDSI Metric",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ventureId\": \"{{venture_id}}\",\n  \"metricCode\": \"OI.1\",\n  \"metricName\": \"Women-led ventures supported\",\n  \"category\": \"GENDER\",\n  \"targetValue\": 1,\n  \"currentValue\": 1,\n  \"unit\": \"ventures\",\n  \"notes\": \"Test metric for API validation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/gedsi-metrics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "gedsi-metrics"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Create GEDSI metric successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('id');",
+                  "    pm.environment.set('gedsi_metric_id', responseJson.id);",
+                  "});",
+                  "",
+                  "pm.test(\"GEDSI metric validation\", function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.metricCode).to.eql('OI.1');",
+                  "    pm.expect(responseJson.category).to.eql('GENDER');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AI Services API",
+      "item": [
+        {
+          "name": "Analyze Venture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ventureId\": \"{{venture_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ai/analyze-venture",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ai", "analyze-venture"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"AI analysis successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('analysis');",
+                  "});",
+                  "",
+                  "pm.test(\"GEDSI alignment score valid\", function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.analysis && responseJson.analysis.gedsiAlignment) {",
+                  "        pm.expect(responseJson.analysis.gedsiAlignment).to.be.a('number');",
+                  "        pm.expect(responseJson.analysis.gedsiAlignment).to.be.within(0, 100);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"AI response time acceptable\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000); // 10 seconds for AI",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GEDSI Insights",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ai/gedsi-insights",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ai", "gedsi-insights"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"GEDSI insights successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test(\"Analytics data structure\", function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('totalMetrics');",
+                  "    pm.expect(responseJson.data).to.have.property('completionRate');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analytics API",
+      "item": [
+        {
+          "name": "Dashboard Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/analytics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analytics"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Analytics successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test(\"Analytics data validation\", function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('totalVentures');",
+                  "    pm.expect(responseJson.data).to.have.property('averageGEDSIScore');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Security Tests",
+      "item": [
+        {
+          "name": "SQL Injection Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventures?search='; DROP TABLE ventures; --",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "'; DROP TABLE ventures; --"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"SQL Injection protection\", function () {",
+                  "    // Should return validation error, not execute SQL",
+                  "    pm.response.to.have.status.that.is.oneOf([400, 422]);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response structure\", function () {",
+                  "    if (pm.response.code >= 400) {",
+                  "        const responseJson = pm.response.json();",
+                  "        pm.expect(responseJson).to.have.property('error');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unauthorized Access Test",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventures",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Unauthorized access blocked\", function () {",
+                  "    // Should require authentication",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Proper error message\", function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete Test Venture",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "next-auth.session-token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventures/{{venture_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ventures", "{{venture_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Delete venture successful\", function () {",
+                  "    pm.response.to.have.status.that.is.oneOf([200, 204]);",
+                  "});",
+                  "",
+                  "// Clean up environment variables",
+                  "pm.environment.unset('venture_id');",
+                  "pm.environment.unset('gedsi_metric_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Running test:', pm.info.requestName);",
+          "",
+          "// Set timestamp for request tracking",
+          "pm.globals.set('requestStartTime', Date.now());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "const responseTime = Date.now() - pm.globals.get('requestStartTime');",
+          "",
+          "pm.test('Response time tracking', function () {",
+          "    console.log('Response time:', responseTime + 'ms');",
+          "});",
+          "",
+          "pm.test('Response has valid JSON structure', function () {",
+          "    if (pm.response.headers.get('Content-Type')?.includes('application/json')) {",
+          "        pm.response.to.be.json;",
+          "    }",
+          "});"
+        ]
+      }
+    }
+  ]
+}

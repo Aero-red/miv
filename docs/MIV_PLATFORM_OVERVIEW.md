@@ -380,6 +380,13 @@ KAFKA_BROKERS="localhost:9092"
 - 🔧 **[Development Setup](./DEVELOPMENT_SETUP.md)** - Developer environment setup
 - 🤝 **[Contributing Guidelines](./CONTRIBUTING.md)** - How to contribute
 
+### **Quality Assurance & Testing**
+- 🧪 **[Testing Strategy](./TESTING_STRATEGY.md)** - Comprehensive testing approach
+- 📊 **[Performance Benchmarks](./PERFORMANCE_BENCHMARKS.md)** - Performance analysis & load testing
+- 🔧 **[API Testing Guide](./API_TESTING_GUIDE.md)** - API testing & Postman collections
+- 🛡️ **[Disaster Recovery](./DISASTER_RECOVERY.md)** - Business continuity planning
+- 🔗 **[Integration Guides](./INTEGRATION_GUIDES.md)** - Third-party service integrations
+
 ### **Architecture & Implementation**
 - 🏗️ **[Complete Rebuild Plan](./REBUILD_PLAN.md)** - Enterprise architecture plan
 - 🔧 **[Enterprise Architecture](./ENTERPRISE_ARCHITECTURE.md)** - System architecture

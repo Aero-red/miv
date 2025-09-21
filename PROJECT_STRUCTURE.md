@@ -67,11 +67,19 @@ miv/
 │   └── venture-intake-form.tsx      # Venture Intake Form
 │
 ├── 📁 docs/                         # Documentation
+│   ├── API_REFERENCE.md             # Complete API documentation
+│   ├── API_TESTING_GUIDE.md         # API testing & Postman collections
 │   ├── CURRENT_STATE_ASSESSMENT.md  # Current State Analysis
+│   ├── DISASTER_RECOVERY.md         # Business continuity planning
 │   ├── ENTERPRISE_ARCHITECTURE.md   # Enterprise Architecture
 │   ├── IMPLEMENTATION_GUIDE.md      # Implementation Guide
+│   ├── INTEGRATION_GUIDES.md        # Third-party service integrations
 │   ├── MIGRATION_STRATEGY.md        # Migration Strategy
+│   ├── MIV_PLATFORM_OVERVIEW.md     # Comprehensive platform guide
+│   ├── PERFORMANCE_BENCHMARKS.md    # Performance analysis & load testing
 │   ├── SECURITY_PRIVACY_CHECKLIST.md# Security & Privacy
+│   ├── TESTING_STRATEGY.md          # Comprehensive testing approach
+│   ├── USER_MANUAL.md               # End-user documentation
 │   ├── UX_FLOWCHART_STRUCTURE.md    # UX Design & User Flows
 │   └── WIREFRAMES_UX_GUIDE.md       # Visual Design & Wireframes
 │
@@ -144,7 +152,7 @@ miv/
 
 - **Total Files**: 236 files
 - **Source Code**: 171 files
-- **Documentation**: 23 files
+- **Documentation**: 28 files
 - **Configuration**: 9 files
 - **Dependencies**: 1 file (package-lock.json)
 
