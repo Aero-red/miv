@@ -335,6 +335,17 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000) to see the application running!
 
+### 2.1 Test Login (local dev)
+
+Use this test account for quick local testing:
+
+- Email: `admin@miv.org`
+- Password: `admin123`
+
+Notes:
+- This bypass works only in non-production builds.
+- The user must exist in the database. If missing, create it via the Register page using `admin@miv.org`, then sign in with `admin123`.
+
 ### **3. Production Deployment**
 
 ```bash
