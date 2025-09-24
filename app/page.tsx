@@ -1,177 +1,313 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { 
   ArrowRight,
-  Target, 
-  Heart, 
-  Globe, 
-  Users,
-  Award,
-  TrendingUp,
-  Building2,
-  MapPin,
-  Calendar,
+  ChevronDown,
+  Play,
+  Pause,
   CheckCircle,
-  Sparkles,
   BarChart3,
-  FileText,
-  DollarSign,
+  Users,
   Shield,
   Zap,
+  Target,
+  TrendingUp,
+  Building2,
+  Globe,
   Star,
-  ArrowUpRight,
-  Play,
-  ChevronDown,
-  MousePointer,
-  Layers,
-  Cpu,
-  Database,
-  Network,
-  Rocket,
-  Eye,
-  Code,
-  Palette,
-  Smartphone,
-  Lightbulb,
-  BarChart,
-  PieChart,
-  Activity,
-  UserPlus,
   Menu,
   X,
-  Search,
-  Bell,
-  Settings,
-  LogIn,
-  User,
-  ChevronRight,
-  ExternalLink,
-  Download,
-  Mail,
-  Phone,
-  MessageCircle,
+  Brain,
+  Database,
+  Network,
+  Eye,
   Clock,
-  Globe2,
-  Lock,
-  RefreshCw,
-  Brain
-} from "lucide-react"
-import { Logo } from "@/components/logo"
+  DollarSign
+} from 'lucide-react'
+import { Logo } from '@/components/logo'
 
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState('hero')
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [scrollY, setScrollY] = useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [activeTab, setActiveTab] = useState('activity')
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [slideDirection, setSlideDirection] = useState('next')
+  const [touchStartX, setTouchStartX] = useState(0)
+  const [touchEndX, setTouchEndX] = useState(0)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [parallaxOffset, setParallaxOffset] = useState(0)
 
-  // Intersection Observer for smooth scrolling
+  const slides = [
+    {
+      id: 0,
+      title: "Deal Flow Dashboard",
+      description: "Kanban-style deal management with real-time updates",
+      type: "dashboard"
+    },
+    {
+      id: 1,
+      title: "Company Profile",
+      description: "Comprehensive company insights with AI-powered enrichment",
+      type: "profile"
+    },
+    {
+      id: 2,
+      title: "Analytics Dashboard",
+      description: "Advanced analytics and performance tracking",
+      type: "analytics"
+    }
+  ]
+
+  // Handle scroll animations and parallax
   useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY
+      setScrollY(scrollTop)
+      setParallaxOffset(scrollTop * 0.5) // Parallax speed multiplier
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth - 0.5) * 2,
+        y: (e.clientY / window.innerHeight - 0.5) * 2
+      })
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            setActiveSection(entry.target.id)
+            entry.target.classList.add('animate-in')
           }
         })
       },
-      { threshold: 0.5 }
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     )
 
-    const sections = document.querySelectorAll('section[id]')
-    sections.forEach((section) => observer.observe(section))
+    // Observe all animated elements
+    const animatedElements = document.querySelectorAll('.animate-on-scroll')
+    animatedElements.forEach((el) => observer.observe(el))
 
-    return () => observer.disconnect()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('mousemove', handleMouseMove, { passive: true })
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('mousemove', handleMouseMove)
+      observer.disconnect()
+    }
   }, [])
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      setEmail('')
-      // Show success message
-    }, 2000)
+  // Auto-play functionality
+  useEffect(() => {
+    if (!isAutoPlaying) return
+
+    const interval = setInterval(() => {
+      setSlideDirection('next')
+      setCurrentSlide((prev) => (prev + 1) % slides.length)
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [isAutoPlaying, slides.length])
+
+  // Slide navigation functions
+  const nextSlide = () => {
+    setSlideDirection('next')
+    setCurrentSlide((prev) => (prev + 1) % slides.length)
   }
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
+  const prevSlide = () => {
+    setSlideDirection('prev')
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
+  }
+
+  const goToSlide = (index: number) => {
+    setSlideDirection(index > currentSlide ? 'next' : 'prev')
+    setCurrentSlide(index)
+  }
+
+  // Touch/swipe support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return
+    
+    const distance = touchStartX - touchEndX
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      nextSlide()
+    } else if (isRightSwipe) {
+      prevSlide()
     }
+
+    setTouchStartX(0)
+    setTouchEndX(0)
+  }
+
+  // Keyboard support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        prevSlide()
+      } else if (e.key === 'ArrowRight') {
+        nextSlide()
+      } else if (e.key === ' ') {
+        e.preventDefault()
+        setIsAutoPlaying(!isAutoPlaying)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isAutoPlaying])
+
+  // Handle dropdown interactions
+  const handleDropdownEnter = (dropdown: string) => {
+    setActiveDropdown(dropdown)
+  }
+
+  const handleDropdownLeave = () => {
+    setActiveDropdown(null)
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
+    <div className="min-h-screen bg-white">
+      {/* Professional Navigation */}
+      <nav className="bg-white sticky top-0 z-50 border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center">
+            <Link href="/" className="flex items-center">
               <Logo />
-            </div>
+            </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              <button 
-                onClick={() => scrollToSection('features')}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+            <div className="hidden lg:flex items-center space-x-8">
+              {/* Products Dropdown */}
+              <div 
+                className="relative"
+                onMouseEnter={() => handleDropdownEnter('products')}
+                onMouseLeave={handleDropdownLeave}
               >
-                Features
-              </button>
-              <button 
-                onClick={() => scrollToSection('solutions')}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                <button className="flex items-center text-gray-700 hover:text-gray-900 font-medium py-2 transition-colors">
+                  Products
+                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${activeDropdown === 'products' ? 'rotate-180' : ''}`} />
+                </button>
+                <div className={`absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-xl border border-gray-100 transition-all duration-200 ${
+                  activeDropdown === 'products' 
+                    ? 'opacity-100 visible transform translate-y-0' 
+                    : 'opacity-0 invisible transform -translate-y-2'
+                }`}>
+                  <div className="p-6">
+                    <div className="grid gap-1">
+                      <Link href="/dashboard" className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-blue-200 transition-colors">
+                          <BarChart3 className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">MIV Platform</div>
+                          <div className="text-sm text-gray-500">Complete venture capital management solution</div>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/ai-analysis" className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-green-200 transition-colors">
+                          <Brain className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">AI Analytics</div>
+                          <div className="text-sm text-gray-500">Intelligent deal sourcing and analysis</div>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/portfolio" className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-purple-200 transition-colors">
+                          <Target className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">Portfolio Management</div>
+                          <div className="text-sm text-gray-500">Track and optimize your investments</div>
+                        </div>
+                      </Link>
+                    </div>
+                    <div className="border-t border-gray-100 mt-4 pt-4">
+                      <Link href="/dashboard" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                        View all products →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Solutions Dropdown */}
+              <div 
+                className="relative"
+                onMouseEnter={() => handleDropdownEnter('solutions')}
+                onMouseLeave={handleDropdownLeave}
               >
-                Solutions
-              </button>
-              <button 
-                onClick={() => scrollToSection('pricing')}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Pricing
-              </button>
-              <button 
-                onClick={() => scrollToSection('about')}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                About
-              </button>
-              <button 
-                onClick={() => scrollToSection('contact')}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Contact
-              </button>
+                <button className="flex items-center text-gray-700 hover:text-gray-900 font-medium py-2 transition-colors">
+                  Solutions
+                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${activeDropdown === 'solutions' ? 'rotate-180' : ''}`} />
+                </button>
+                <div className={`absolute top-full left-0 mt-1 w-96 bg-white rounded-lg shadow-xl border border-gray-100 transition-all duration-200 ${
+                  activeDropdown === 'solutions' 
+                    ? 'opacity-100 visible transform translate-y-0' 
+                    : 'opacity-0 invisible transform -translate-y-2'
+                }`}>
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">Industries</h4>
+                        <div className="space-y-2">
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Venture Capital</Link>
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Private Equity</Link>
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Family Offices</Link>
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Corporate VC</Link>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">Workflows</h4>
+                        <div className="space-y-2">
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Deal Sourcing</Link>
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Due Diligence</Link>
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">Portfolio Support</Link>
+                          <Link href="#" className="block text-sm text-gray-600 hover:text-gray-900 py-1 transition-colors">LP Relations</Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Link href="#" className="text-gray-700 hover:text-gray-900 font-medium">Resources</Link>
+              <Link href="#" className="text-gray-700 hover:text-gray-900 font-medium">Why MIV</Link>
+              <Link href="#" className="text-gray-700 hover:text-gray-900 font-medium">Company</Link>
             </div>
 
             {/* CTA Buttons */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Link href="/auth/login">
-                <Button variant="ghost" size="sm">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
+            <div className="hidden lg:flex items-center space-x-4">
+              <Link href="/auth/login" className="text-gray-700 hover:text-gray-900 font-medium">
+                Sign in
               </Link>
-              <Link href="/dashboard">
-                <Button size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Get Started
-                </Button>
-              </Link>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
+                Get started
+              </Button>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile menu button */}
             <button
-              className="md:hidden"
+              className="lg:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -179,576 +315,922 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-200">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              <button 
-                onClick={() => { scrollToSection('features'); setIsMenuOpen(false); }}
-                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
-              >
-                Features
-              </button>
-              <button 
-                onClick={() => { scrollToSection('solutions'); setIsMenuOpen(false); }}
-                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
-              >
-                Solutions
-              </button>
-              <button 
-                onClick={() => { scrollToSection('pricing'); setIsMenuOpen(false); }}
-                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
-              >
-                Pricing
-              </button>
-              <button 
-                onClick={() => { scrollToSection('about'); setIsMenuOpen(false); }}
-                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
-              >
-                About
-              </button>
-              <button 
-                onClick={() => { scrollToSection('contact'); setIsMenuOpen(false); }}
-                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
-              >
-                Contact
-              </button>
-              <div className="pt-4 space-y-2">
-                <Button variant="ghost" size="sm" className="w-full">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
-                <Button size="sm" className="w-full">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Get Started
-                </Button>
+          <div className="lg:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-100">
+              <Link href="/dashboard" className="block px-3 py-2 text-gray-700 hover:text-gray-900 font-medium">Platform</Link>
+              <Link href="#" className="block px-3 py-2 text-gray-700 hover:text-gray-900 font-medium">Solutions</Link>
+              <Link href="#" className="block px-3 py-2 text-gray-700 hover:text-gray-900 font-medium">Resources</Link>
+              <Link href="#" className="block px-3 py-2 text-gray-700 hover:text-gray-900 font-medium">Company</Link>
+              <div className="border-t border-gray-200 pt-4">
+                <Link href="/auth/login" className="block px-3 py-2 text-gray-700 hover:text-gray-900 font-medium">Sign in</Link>
+                <Button className="mt-2 mx-3 bg-blue-600 hover:bg-blue-700 text-white w-full rounded-lg">Get started</Button>
               </div>
             </div>
           </div>
         )}
       </nav>
 
-            {/* Hero Section */}
-      <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        {/* Animated Background Elements */}
+      {/* Enhanced Professional Hero */}
+      <section className="relative bg-gradient-to-b from-gray-50 to-white pt-20 pb-32 overflow-hidden">
+        {/* Professional Background Elements */}
         <div className="absolute inset-0">
-          {/* Geometric Shapes */}
-          <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+          {/* Grid Pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3e%3cg fill='none' fill-rule='evenodd'%3e%3cg fill='%23000000' fill-opacity='0.4'%3e%3ccircle cx='7' cy='7' r='1'/%3e%3c/g%3e%3c/g%3e%3c/svg%3e")`
+            }}></div>
+          </div>
           
-          {/* Floating Particles */}
-          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-          <div className="absolute top-1/3 right-1/3 w-1 h-1 bg-purple-400 rounded-full animate-bounce delay-300"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-pink-400 rounded-full animate-bounce delay-700"></div>
-          <div className="absolute top-2/3 right-1/4 w-1 h-1 bg-blue-400 rounded-full animate-bounce delay-1000"></div>
+          {/* Gradient Orbs */}
+          <div 
+            className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 rounded-full opacity-30 blur-3xl animate-float-slow"
+            style={{ transform: `translateY(${parallaxOffset * 0.2}px)` }}
+          ></div>
+          <div 
+            className="absolute bottom-1/3 left-1/4 w-[400px] h-[400px] bg-gradient-to-tr from-emerald-100 via-teal-50 to-cyan-100 rounded-full opacity-25 blur-3xl animate-float-medium" 
+            style={{ animationDelay: '2s', transform: `translateY(${parallaxOffset * -0.1}px)` }}
+          ></div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 text-center">
-          {/* Status Badge */}
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-white/90 font-medium mb-8">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-sm">Platform Live</span>
-            <span className="text-green-400 font-semibold">•</span>
-            <span className="text-sm">AI-Powered</span>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            {/* Trust Badge */}
+            <div className="animate-on-scroll opacity-0 translate-y-4 transition-all duration-700 mb-8">
+              <div className="inline-flex items-center bg-white border border-gray-200 rounded-full px-6 py-2 shadow-sm">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse"></div>
+                <span className="text-sm font-semibold text-gray-700">Trusted by 500+ VCs worldwide</span>
+              </div>
+            </div>
+
+            {/* Main Headline with Bold Font */}
+            <div className="animate-on-scroll opacity-0 translate-y-8 transition-all duration-700 delay-100 mb-8">
+              <h1 className="font-black text-5xl sm:text-6xl lg:text-8xl text-gray-900 leading-[0.9] tracking-tight" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif', fontWeight: 900 }}>
+                VENTURE
+                <br />
+                <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  INTELLIGENCE
+                </span>
+              </h1>
+            </div>
+
+            {/* Professional Subheadline */}
+            <div className="animate-on-scroll opacity-0 translate-y-8 transition-all duration-700 delay-200 mb-12">
+              <div className="max-w-4xl mx-auto">
+                <p className="text-xl md:text-2xl text-gray-600 leading-relaxed mb-6">
+                  The world's most advanced AI-powered venture capital platform. 
+                  <br className="hidden md:block" />
+                  Make data-driven investment decisions with unprecedented precision.
+                </p>
+                
+                {/* Key Stats */}
+                <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-500">
+                  <div className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
+                    $2.5B+ AUM Managed
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
+                    95% Deal Accuracy
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></div>
+                    40% Faster Due Diligence
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced CTA Buttons */}
+            <div className="animate-on-scroll opacity-0 translate-y-8 transition-all duration-700 delay-300 mb-20">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/dashboard">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-lg font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5">
+                    <span>Start Free Trial</span>
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                
+                <Button variant="outline" className="border-2 border-gray-300 text-gray-700 hover:border-gray-900 hover:text-gray-900 px-12 py-4 text-lg font-semibold rounded-xl bg-white/80 backdrop-blur-sm transform hover:-translate-y-0.5 transition-all">
+                  <Play className="mr-2 h-5 w-5" />
+                  Watch Demo
+                </Button>
+              </div>
+            </div>
+
+            {/* Enhanced Feature Preview Cards */}
+            <div className="animate-on-scroll opacity-0 translate-y-8 transition-all duration-700 delay-400">
+              <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
+                {/* AI Intelligence Card */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  <div className="relative bg-white/80 backdrop-blur-sm border border-gray-200 rounded-3xl p-8 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                      <Brain className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-black text-gray-900 mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 900 }}>
+                      AI DEAL ENGINE
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed text-lg mb-6">
+                      Advanced machine learning algorithms analyze 10,000+ data points to identify and score high-potential investment opportunities.
+                    </p>
+                    <div className="flex items-center text-blue-600 font-semibold">
+                      <span>Learn more</span>
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Portfolio Analytics Card */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  <div className="relative bg-white/80 backdrop-blur-sm border border-gray-200 rounded-3xl p-8 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                      <BarChart3 className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-black text-gray-900 mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 900 }}>
+                      PORTFOLIO COMMAND
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed text-lg mb-6">
+                      Real-time portfolio performance tracking with predictive analytics, risk assessment, and automated reporting.
+                    </p>
+                    <div className="flex items-center text-emerald-600 font-semibold">
+                      <span>Learn more</span>
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security Card */}
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-violet-600 rounded-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  <div className="relative bg-white/80 backdrop-blur-sm border border-gray-200 rounded-3xl p-8 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                      <Shield className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-black text-gray-900 mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 900 }}>
+                      FORTRESS SECURITY
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed text-lg mb-6">
+                      Military-grade encryption with SOC 2 Type II compliance, zero-trust architecture, and comprehensive audit trails.
+                    </p>
+                    <div className="flex items-center text-purple-600 font-semibold">
+                      <span>Learn more</span>
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Social Proof */}
+            <div className="animate-on-scroll opacity-0 translate-y-8 transition-all duration-700 delay-500">
+              <div className="pt-12 border-t border-gray-200">
+                <p className="text-center text-gray-500 text-sm mb-8 font-semibold tracking-wide">TRUSTED BY LEADING VENTURE CAPITAL FIRMS</p>
+                <div className="flex flex-wrap justify-center items-center gap-12 opacity-60">
+                  <div className="text-2xl font-bold text-gray-400">SEQUOIA</div>
+                  <div className="text-2xl font-bold text-gray-400">a16z</div>
+                  <div className="text-2xl font-bold text-gray-400">KLEINER PERKINS</div>
+                  <div className="text-2xl font-bold text-gray-400">GREYLOCK</div>
+                  <div className="text-2xl font-bold text-gray-400">BENCHMARK</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-on-scroll opacity-0 translate-y-8 transition-all duration-700">
+            <p className="text-blue-600 font-semibold text-sm uppercase tracking-wide mb-4">PLATFORM</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Drive better investment decisions
+            </h2>
           </div>
 
-          {/* Main Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            <span className="block">The Future of</span>
-            <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Venture Intelligence
-            </span>
-          </h1>
+          <div className="animate-on-scroll opacity-0 translate-y-12 transition-all duration-700 delay-200">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 group">
+              <div className="grid lg:grid-cols-2 gap-0">
+                <div className="p-8 lg:p-12 flex flex-col justify-center order-2 lg:order-1">
+                  <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6">
+                    MIV Platform
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                    Purpose-built private capital platform that enables firms to get into the right deals and make better decisions across the firm with data and AI
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white w-fit group-hover:shadow-lg transform group-hover:scale-105 transition-all duration-200">
+                    Learn more
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 lg:p-12 flex items-center justify-center order-1 lg:order-2">
+                  <div className="w-full h-80 bg-white rounded-lg shadow-lg border border-gray-200 relative overflow-hidden group-hover:shadow-xl transition-all duration-300">
+                    <div className="p-6 h-full">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="flex space-x-2">
+                          <div className="h-6 w-6 bg-blue-100 rounded"></div>
+                          <div className="h-6 w-6 bg-green-100 rounded"></div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="bg-blue-50 p-3 rounded">
+                          <div className="h-8 w-8 bg-blue-200 rounded mb-2"></div>
+                          <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded">
+                          <div className="h-8 w-8 bg-green-200 rounded mb-2"></div>
+                          <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="bg-purple-50 p-3 rounded">
+                          <div className="h-8 w-8 bg-purple-200 rounded mb-2"></div>
+                          <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                      </div>
+                </div>
+                </div>
+                </div>
+                </div>
+                </div>
+          </div>
+        </div>
+      </section>
 
-          {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-            Unlock the power of AI-driven venture management. From deal sourcing to exit strategies, 
-            MIV provides the intelligence you need to make data-driven investment decisions.
+      {/* Products Showcase - Affinity Style Slides */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <p className="text-blue-600 font-semibold text-sm uppercase tracking-wide mb-4">OUR PRODUCTS</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Drive better dealmaking across your team with MIV
+            </h2>
+          </div>
+
+          {/* Enhanced Product Slides */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
+            {/* Interactive Slide Container */}
+            <div className="relative">
+              {/* Slide Controls */}
+              <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
+                <button
+                  onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                  className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all duration-200 shadow-lg"
+                >
+                  {isAutoPlaying ? <Pause className="h-4 w-4 text-gray-600" /> : <Play className="h-4 w-4 text-gray-600" />}
+                </button>
+              </div>
+
+              {/* Slide Container */}
+              <div 
+                className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 shadow-xl relative overflow-hidden"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {/* Progress Bar */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gray-200">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-100"
+                    style={{ 
+                      width: isAutoPlaying ? '100%' : '0%',
+                      animation: isAutoPlaying ? 'slideProgress 4s linear infinite' : 'none'
+                    }}
+                  />
+                </div>
+
+                {/* Slide Content */}
+                <div className="relative">
+                  {currentSlide === 0 && (
+                    <div className={`slide-content ${slideDirection === 'next' ? 'slide-enter' : 'slide-enter-reverse'}`}>
+                      <div className="bg-white rounded-lg p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-6">
+                          <h4 className="font-bold text-gray-900">Deal Flow Dashboard</h4>
+                          <div className="flex space-x-2">
+                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div className="bg-blue-50 p-3 rounded text-center hover:bg-blue-100 transition-colors cursor-pointer">
+                            <div className="text-xs text-gray-500 mb-1">New</div>
+                            <div className="text-lg font-bold text-blue-600">23</div>
+                          </div>
+                          <div className="bg-yellow-50 p-3 rounded text-center hover:bg-yellow-100 transition-colors cursor-pointer">
+                            <div className="text-xs text-gray-500 mb-1">Review</div>
+                            <div className="text-lg font-bold text-yellow-600">8</div>
+                          </div>
+                          <div className="bg-green-50 p-3 rounded text-center hover:bg-green-100 transition-colors cursor-pointer">
+                            <div className="text-xs text-gray-500 mb-1">Won</div>
+                            <div className="text-lg font-bold text-green-600">12</div>
+                          </div>
+                          <div className="bg-red-50 p-3 rounded text-center hover:bg-red-100 transition-colors cursor-pointer">
+                            <div className="text-xs text-gray-500 mb-1">Lost</div>
+                            <div className="text-lg font-bold text-red-600">5</div>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {[
+                            { name: "TechStartup AI", stage: "Series A", amount: "$2.5M", progress: 75 },
+                            { name: "DataCorp Inc", stage: "Series B", amount: "$8.2M", progress: 45 },
+                            { name: "CloudTech", stage: "Seed", amount: "$1.1M", progress: 90 }
+                          ].map((deal, i) => (
+                            <div key={i} className="flex items-center space-x-3 p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors cursor-pointer">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Building2 className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{deal.name}</div>
+                                <div className="text-xs text-gray-500">{deal.stage}</div>
+                                <div className="mt-1 bg-gray-200 rounded-full h-1">
+                                  <div className="bg-blue-600 h-1 rounded-full transition-all duration-1000" style={{width: `${deal.progress}%`}}></div>
+                                </div>
+                              </div>
+                              <div className="text-sm font-semibold text-gray-700">{deal.amount}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentSlide === 1 && (
+                    <div className={`slide-content ${slideDirection === 'next' ? 'slide-enter' : 'slide-enter-reverse'}`}>
+                      <div className="bg-white rounded-lg p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-6">
+                          <h4 className="font-bold text-gray-900">Company Profile</h4>
+                          <div className="text-xs text-blue-600 font-semibold">AI Enriched</div>
+                        </div>
+                        <div className="flex items-center space-x-4 mb-6">
+                          <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                            <Building2 className="h-8 w-8 text-purple-600" />
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-gray-900">TechCorp Inc.</h5>
+                            <p className="text-sm text-gray-500">Series B • AI/ML • San Francisco</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs text-green-600">Active</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="bg-blue-50 p-3 rounded">
+                            <div className="text-xs text-gray-500 mb-1">Funding Stage</div>
+                            <div className="font-semibold text-gray-900">Series B</div>
+                          </div>
+                          <div className="bg-green-50 p-3 rounded">
+                            <div className="text-xs text-gray-500 mb-1">Last Funding</div>
+                            <div className="font-semibold text-gray-900">$15M</div>
+                          </div>
+                          <div className="bg-purple-50 p-3 rounded">
+                            <div className="text-xs text-gray-500 mb-1">Employees</div>
+                            <div className="font-semibold text-gray-900">127</div>
+                          </div>
+                          <div className="bg-orange-50 p-3 rounded">
+                            <div className="text-xs text-gray-500 mb-1">Founded</div>
+                            <div className="font-semibold text-gray-900">2019</div>
+                          </div>
+                        </div>
+                        <div className="border-t pt-4">
+                          <div className="text-xs text-gray-500 mb-2">Recent Activity</div>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2 text-sm">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-gray-600">Meeting scheduled with CEO</span>
+                              <span className="text-xs text-gray-400">2h ago</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              <span className="text-gray-600">Due diligence materials shared</span>
+                              <span className="text-xs text-gray-400">1d ago</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentSlide === 2 && (
+                    <div className={`slide-content ${slideDirection === 'next' ? 'slide-enter' : 'slide-enter-reverse'}`}>
+                      <div className="bg-white rounded-lg p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-6">
+                          <h4 className="font-bold text-gray-900">Analytics Dashboard</h4>
+                          <div className="text-xs text-green-600 font-semibold">Live Data</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          <div className="bg-blue-50 p-4 rounded-lg">
+                            <div className="text-2xl font-bold text-blue-600 mb-1">$47M</div>
+                            <div className="text-xs text-gray-500">Total AUM</div>
+                            <div className="mt-2 flex items-center space-x-1">
+                              <TrendingUp className="h-3 w-3 text-green-500" />
+                              <span className="text-xs text-green-600">+23%</span>
+                            </div>
+                          </div>
+                          <div className="bg-green-50 p-4 rounded-lg">
+                            <div className="text-2xl font-bold text-green-600 mb-1">89.7%</div>
+                            <div className="text-xs text-gray-500">Success Rate</div>
+                            <div className="mt-2 flex items-center space-x-1">
+                              <TrendingUp className="h-3 w-3 text-green-500" />
+                              <span className="text-xs text-green-600">+5.2%</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Portfolio Performance</span>
+                            <span className="text-sm font-semibold text-gray-900">Excellent</span>
+                          </div>
+                          <div className="bg-gray-200 rounded-full h-2">
+                            <div className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full w-4/5 animate-pulse"></div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-lg font-bold text-gray-900">47</div>
+                              <div className="text-xs text-gray-500">Active Deals</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-gray-900">12</div>
+                              <div className="text-xs text-gray-500">This Month</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-gray-900">3.2x</div>
+                              <div className="text-xs text-gray-500">ROI</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Enhanced Navigation */}
+              <div className="mt-8">
+                {/* Slide Dots */}
+                <div className="flex justify-center space-x-3 mb-4">
+                  {slides.map((slide, index) => (
+                    <button
+                      key={slide.id}
+                      onClick={() => goToSlide(index)}
+                      className={`w-3 h-3 rounded-full transition-all duration-300 relative ${
+                        currentSlide === index ? 'bg-blue-600 scale-125' : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                    >
+                      {currentSlide === index && (
+                        <div className="absolute inset-0 rounded-full bg-blue-600 animate-ping"></div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Slide Info */}
+                <div className="text-center">
+                  <h5 className="font-semibold text-gray-900 mb-1">{slides[currentSlide].title}</h5>
+                  <p className="text-sm text-gray-600">{slides[currentSlide].description}</p>
+                </div>
+
+                {/* Navigation Arrows */}
+                <div className="flex justify-center space-x-4 mt-4">
+                  <button
+                    onClick={prevSlide}
+                    className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                  >
+                    <ArrowRight className="h-4 w-4 text-gray-600 rotate-180" />
+                  </button>
+                  <button
+                    onClick={nextSlide}
+                    className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                  >
+                    <ArrowRight className="h-4 w-4 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Product Descriptions */}
+            <div className="space-y-12">
+              <div>
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6">MIV Platform</h3>
+                <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                  MIV brings together relationship intelligence, deal sourcing, deal flow management, portfolio support, fundraising, and analytics that integrate directly with how you work
+                </p>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Learn more
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                </div>
+
+              <div>
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6">MIV Analytics</h3>
+                <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                  MIV provides deal teams with reliable and regularly updated insights about their organization's network of people and companies—and extends these insights into their workflow.
+                </p>
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                  Learn more
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Affinity Advantage Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <p className="text-blue-600 font-semibold text-sm uppercase tracking-wide mb-4">MIV ADVANTAGE</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Drive deals faster
+            </h2>
+          </div>
+
+          {/* Interactive Tabs */}
+          <div className="mb-12">
+            <div className="flex justify-center space-x-8 border-b border-gray-200">
+              {[
+                { id: 'activity', label: 'Activity capture' },
+                { id: 'intelligence', label: 'Relationship intelligence' },
+                { id: 'management', label: 'Deal management' },
+                { id: 'enrichment', label: 'Data enrichment' },
+                { id: 'infrastructure', label: 'Data infrastructure' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`pb-4 px-2 font-medium text-sm transition-colors border-b-2 ${
+                    activeTab === tab.id
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              {activeTab === 'activity' && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    The easiest path to firmwide adoption
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                    By capturing interactions from inboxes and calendars—and even summarizing conversations with AI tools like Notetaker—MIV makes adoption effortless across the firm.
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Learn more
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {activeTab === 'intelligence' && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    See every connection that matters
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                    MIV maps your firm's network and uses AI to uncover the warmest paths into the relationships and opportunities that matter most.
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Learn more
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {activeTab === 'management' && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    Keep every deal on track
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                    No more digging through inboxes, PDFs, or spreadsheets—MIV shows you the real-time status and context of every deal.
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Learn more
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {activeTab === 'enrichment' && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    Enriched data on every record
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                    Automatically enrich CRM records with data from 40+ premium data sources to make faster, more informed investment decisions
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Learn more
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {activeTab === 'infrastructure' && (
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    Your network data, everywhere you need it
+                  </h3>
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                    Seamlessly integrate relationship intelligence and deal data into your existing processes and tools, so insights flow everywhere your team works.
+                  </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Learn more
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Dynamic Screenshot */}
+            <div className="relative">
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                {activeTab === 'activity' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-semibold text-gray-900">Activity Timeline</h5>
+                      <div className="text-xs text-gray-500">Live sync</div>
+                    </div>
+                    <div className="space-y-3">
+                      {[
+                        { type: 'email', contact: 'John Smith, CEO', time: '2 hours ago', color: 'blue' },
+                        { type: 'call', contact: 'Sarah Johnson, CTO', time: '1 day ago', color: 'green' },
+                        { type: 'meeting', contact: 'Mike Chen, Founder', time: '3 days ago', color: 'purple' }
+                      ].map((activity, i) => (
+                        <div key={i} className="flex items-center space-x-3 p-3 bg-gray-50 rounded">
+                          <div className={`w-8 h-8 bg-${activity.color}-100 rounded-full flex items-center justify-center`}>
+                            <div className={`w-3 h-3 bg-${activity.color}-500 rounded-full`}></div>
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{activity.contact}</div>
+                            <div className="text-xs text-gray-500">{activity.time}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'intelligence' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-semibold text-gray-900">Network Connections</h5>
+                      <div className="text-xs text-blue-600">AI Powered</div>
+                    </div>
+                    <div className="space-y-3">
+                      {[
+                        { name: 'Alex Chen', role: 'Partner at Sequoia', strength: 'Strong', color: 'green' },
+                        { name: 'Maria Garcia', role: 'VP at Andreessen', strength: 'Medium', color: 'yellow' },
+                        { name: 'David Kim', role: 'Director at Kleiner', strength: 'Weak', color: 'red' }
+                      ].map((connection, i) => (
+                        <div key={i} className="flex items-center space-x-3 p-3 bg-gray-50 rounded">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{connection.name}</div>
+                            <div className="text-xs text-gray-500">{connection.role}</div>
+                          </div>
+                          <div className={`px-2 py-1 text-xs rounded-full bg-${connection.color}-100 text-${connection.color}-700`}>
+                            {connection.strength}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(activeTab === 'management' || activeTab === 'enrichment' || activeTab === 'infrastructure') && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-semibold text-gray-900">Deal Pipeline</h5>
+                      <div className="text-xs text-gray-500">Updated now</div>
+                    </div>
+              <div className="space-y-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-900">TechStartup AI</span>
+                          <span className="text-sm text-blue-600">Series A</span>
+                        </div>
+                        <div className="text-sm text-gray-600">Last contact: 2 days ago</div>
+                        <div className="mt-2 bg-blue-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full w-3/4"></div>
+                        </div>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-900">DataCorp</span>
+                          <span className="text-sm text-green-600">Series B</span>
+                        </div>
+                        <div className="text-sm text-gray-600">Last contact: 1 week ago</div>
+                        <div className="mt-2 bg-green-200 rounded-full h-2">
+                          <div className="bg-green-600 h-2 rounded-full w-1/2"></div>
+                        </div>
+                </div>
+                </div>
+                </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 bg-blue-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <p className="text-blue-100 font-semibold text-sm uppercase tracking-wide mb-4">ENTERPRISE-GRADE DEALMAKING</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+              Driving measurable results for private capital firms
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center grid-fade-in">
+            <div>
+              <div className="text-4xl lg:text-5xl font-bold text-white mb-2">150%</div>
+              <div className="text-blue-100">growth in qualified deal flow</div>
+                </div>
+            <div>
+              <div className="text-4xl lg:text-5xl font-bold text-white mb-2">3x</div>
+              <div className="text-blue-100">increase in trackable relationships</div>
+                </div>
+            <div>
+              <div className="text-4xl lg:text-5xl font-bold text-white mb-2">40%</div>
+              <div className="text-blue-100">reduction in deal processing time</div>
+            </div>
+            <div>
+              <div className="text-4xl lg:text-5xl font-bold text-white mb-2">500+</div>
+              <div className="text-blue-100">hours saved annually per user</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Explore MIV - Comprehensive Grid */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Explore MIV
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+            {/* Platform Features */}
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <BarChart3 className="h-6 w-6 text-blue-600" />
+                <h4 className="font-bold text-gray-900">Platform</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Standardize your process to review and track deals across the firm</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Eye className="h-6 w-6 text-green-600" />
+                <h4 className="font-bold text-gray-900">Activity capture</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Automatically capture and store all current and historical activity</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Network className="h-6 w-6 text-purple-600" />
+                <h4 className="font-bold text-gray-900">Relationship intelligence</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Quantify relationship strength based on recency and frequency of interactions</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Database className="h-6 w-6 text-orange-600" />
+                <h4 className="font-bold text-gray-900">Data enrichment</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Enrich profiles with verified data from Crunchbase, Dealroom, and Pitchbook</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Globe className="h-6 w-6 text-cyan-600" />
+                <h4 className="font-bold text-gray-900">Integrations</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Integrate proprietary network and deal data across your entire tech stack</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Brain className="h-6 w-6 text-indigo-600" />
+                <h4 className="font-bold text-gray-900">AI Analytics</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Analyze deal, relationship, and interaction data to uncover insights</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Shield className="h-6 w-6 text-red-600" />
+                <h4 className="font-bold text-gray-900">Data permissions</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Control how sensitive data is shared within customer teams</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <TrendingUp className="h-6 w-6 text-pink-600" />
+                <h4 className="font-bold text-gray-900">Analytics & reporting</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Analyze deal, relationship, and interaction data to uncover insights</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="flex items-center space-x-3 mb-3">
+                <Users className="h-6 w-6 text-emerald-600" />
+                <h4 className="font-bold text-gray-900">MIV mobile</h4>
+              </div>
+              <p className="text-gray-600 text-sm">Relationship and deal insights wherever you are</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-blue-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+            Ready to uplevel your data driven investing?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Find out why more than half of leading private capital firms use MIV to transform their relationship data into their competitive advantage.
           </p>
-
-          {/* Key Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <Brain className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-white font-semibold mb-2">AI Analytics</h3>
-              <p className="text-slate-400 text-sm">Intelligent insights and predictive modeling</p>
-            </div>
-            
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <Target className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-white font-semibold mb-2">Pipeline Management</h3>
-              <p className="text-slate-400 text-sm">End-to-end deal flow optimization</p>
-            </div>
-            
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-blue-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <Heart className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-white font-semibold mb-2">Impact Tracking</h3>
-              <p className="text-slate-400 text-sm">Comprehensive ESG and GEDSI metrics</p>
-            </div>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link href="/dashboard">
-              <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-2xl font-semibold px-8 py-4 text-lg transform hover:scale-105 transition-all duration-200">
-                <Rocket className="mr-2 h-5 w-5" />
-                Get Started Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Button size="lg" className="bg-white/10 text-white hover:bg-white/20 font-semibold px-8 py-4 text-lg border border-white/30 backdrop-blur-md transform hover:scale-105 transition-all duration-200">
-              <Play className="mr-2 h-5 w-5" />
-              Watch Demo
-            </Button>
-          </div>
-
-          {/* Trust Indicators */}
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-slate-400">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-400" />
-              <span className="text-sm">500+ Ventures Managed</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-400" />
-              <span className="text-sm">$2.5B+ Capital Deployed</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-400" />
-              <span className="text-sm">98% Success Rate</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Floating Platform Preview */}
-        <div className="absolute bottom-8 right-8 hidden lg:block">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-2xl transform hover:scale-105 transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-              <span className="text-white/60 text-xs">MIV Dashboard</span>
-            </div>
-            <div className="space-y-2">
-              <div className="h-2 bg-white/20 rounded-full"></div>
-              <div className="h-2 bg-white/20 rounded-full w-3/4"></div>
-              <div className="h-2 bg-white/20 rounded-full w-1/2"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need to Scale Your Venture Portfolio
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              From deal sourcing to exit management, MIV provides the tools and insights you need to make data-driven investment decisions.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature Cards */}
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                  <Target className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle>Pipeline Management</CardTitle>
-                <CardDescription>
-                  Streamline your deal flow from initial contact to final investment decision
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
-                  <Brain className="h-6 w-6 text-purple-600" />
-                </div>
-                <CardTitle>AI-Powered Analytics</CardTitle>
-                <CardDescription>
-                  Get intelligent insights and risk assessments powered by advanced AI
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
-                  <Users className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle>GEDSI Integration</CardTitle>
-                <CardDescription>
-                  Track and measure gender, equity, disability, and social inclusion impact
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-200 transition-colors">
-                  <BarChart3 className="h-6 w-6 text-orange-600" />
-                </div>
-                <CardTitle>Advanced Reporting</CardTitle>
-                <CardDescription>
-                  Generate comprehensive reports and visualizations for stakeholders
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-red-200 transition-colors">
-                  <DollarSign className="h-6 w-6 text-red-600" />
-                </div>
-                <CardTitle>Capital Facilitation</CardTitle>
-                <CardDescription>
-                  Manage investment rounds, due diligence, and capital deployment
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-indigo-200 transition-colors">
-                  <Shield className="h-6 w-6 text-indigo-600" />
-                </div>
-                <CardTitle>Enterprise Security</CardTitle>
-                <CardDescription>
-                  Bank-level security with SOC 2 compliance and data encryption
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Solutions Section */}
-      <section id="solutions" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Solutions for Every Stage
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Whether you're a seed-stage fund or a growth equity firm, MIV adapts to your investment strategy and scale.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                Early-Stage Venture Capital
-              </h3>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span>Deal sourcing and pipeline management</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span>Due diligence automation</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span>Portfolio company tracking</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span>Impact measurement and reporting</span>
-                </li>
-              </ul>
-            </div>
-            <div className="bg-white p-8 rounded-2xl shadow-lg">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Building2 className="h-8 w-8 text-blue-600" />
-                </div>
-                <h4 className="text-xl font-semibold mb-2">Venture Capital</h4>
-                <p className="text-gray-600 mb-4">Perfect for funds managing $10M - $100M</p>
-                <Button>Learn More</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Simple, Transparent Pricing
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Choose the plan that fits your fund size and investment strategy.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Starter Plan */}
-            <Card className="relative border-2 hover:border-blue-500 transition-colors">
-              <CardHeader className="text-center">
-                <CardTitle>Starter</CardTitle>
-                <div className="text-3xl font-bold">$99<span className="text-lg text-gray-500">/month</span></div>
-                <CardDescription>Perfect for emerging managers</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Up to 50 ventures
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Basic analytics
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Email support
-                  </li>
-                </ul>
-                <Button className="w-full">Get Started</Button>
-              </CardContent>
-            </Card>
-
-            {/* Professional Plan */}
-            <Card className="relative border-2 border-blue-500 shadow-lg scale-105">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-blue-500 text-white">Most Popular</Badge>
-              </div>
-              <CardHeader className="text-center">
-                <CardTitle>Professional</CardTitle>
-                <div className="text-3xl font-bold">$299<span className="text-lg text-gray-500">/month</span></div>
-                <CardDescription>For growing venture firms</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Up to 200 ventures
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    AI-powered analytics
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Priority support
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Advanced reporting
-                  </li>
-                </ul>
-                <Button className="w-full">Get Started</Button>
-              </CardContent>
-            </Card>
-
-            {/* Enterprise Plan */}
-            <Card className="relative border-2 hover:border-purple-500 transition-colors">
-              <CardHeader className="text-center">
-                <CardTitle>Enterprise</CardTitle>
-                <div className="text-3xl font-bold">Custom</div>
-                <CardDescription>For large investment firms</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Unlimited ventures
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Custom integrations
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Dedicated support
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    White-label options
-                  </li>
-                </ul>
-                <Button variant="outline" className="w-full">Contact Sales</Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                About MIV
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                MIV (Mekong Inclusive Ventures) is a comprehensive platform designed to empower venture capital firms across Southeast Asia. We believe in the power of inclusive investment to drive sustainable economic growth.
-              </p>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">500+</div>
-                  <div className="text-gray-600">Ventures Managed</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-purple-600">$2.8B</div>
-                  <div className="text-gray-600">Capital Facilitated</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">89%</div>
-                  <div className="text-gray-600">GEDSI Compliance</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-orange-600">76%</div>
-                  <div className="text-gray-600">Success Rate</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-8 rounded-2xl shadow-lg">
-              <h3 className="text-xl font-semibold mb-4">Our Mission</h3>
-              <p className="text-gray-600 mb-6">
-                To democratize access to venture capital and create sustainable impact through technology-driven investment management.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <Target className="h-5 w-5 text-blue-500 mr-3" />
-                  <span>Inclusive Investment</span>
-                </div>
-                <div className="flex items-center">
-                  <Globe className="h-5 w-5 text-green-500 mr-3" />
-                  <span>Sustainable Growth</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 text-purple-500 mr-3" />
-                  <span>Community Impact</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Get in Touch
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Ready to transform your venture pipeline? Let's discuss how MIV can help you achieve your investment goals.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div>
-              <h3 className="text-2xl font-semibold mb-6">Contact Information</h3>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <Mail className="h-5 w-5 text-blue-500 mr-3" />
-                  <span>hello@miv-platform.com</span>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-5 w-5 text-green-500 mr-3" />
-                  <span>+1 (555) 123-4567</span>
-                </div>
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-purple-500 mr-3" />
-                  <span>Singapore, Southeast Asia</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input placeholder="First Name" />
-                  <Input placeholder="Last Name" />
-                </div>
-                <Input type="email" placeholder="Email Address" />
-                <Input placeholder="Company" />
-                <textarea 
-                  className="w-full p-3 border border-gray-300 rounded-md resize-none"
-                  rows={4}
-                  placeholder="Message"
-                />
-                <Button className="w-full">Send Message</Button>
-              </form>
-            </div>
-          </div>
+          <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-50 px-8 py-4 text-lg font-semibold">
+            Request a demo
+          </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <div className="flex items-center mb-4">
-                <Logo />
-                <span className="ml-2 text-xl font-bold">MIV</span>
-              </div>
-              <p className="text-gray-400 mb-4">
-                Empowering inclusive ventures across Southeast Asia through innovative pipeline management.
-              </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <Globe className="h-5 w-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <MessageCircle className="h-5 w-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <Users className="h-5 w-5" />
-                </a>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Features</a></li>
-                <li><a href="#" className="hover:text-white">Pricing</a></li>
-                <li><a href="#" className="hover:text-white">API</a></li>
-                <li><a href="#" className="hover:text-white">Integrations</a></li>
+              <h3 className="font-semibold text-white mb-4">Products</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li><Link href="#" className="hover:text-white">MIV Platform</Link></li>
+                <li><Link href="#" className="hover:text-white">AI Analytics</Link></li>
+                <li><Link href="#" className="hover:text-white">Portfolio Management</Link></li>
               </ul>
             </div>
+
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">About</a></li>
-                <li><a href="#" className="hover:text-white">Blog</a></li>
-                <li><a href="#" className="hover:text-white">Careers</a></li>
-                <li><a href="#" className="hover:text-white">Press</a></li>
+              <h3 className="font-semibold text-white mb-4">Solutions</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li><Link href="#" className="hover:text-white">Venture Capital</Link></li>
+                <li><Link href="#" className="hover:text-white">Private Equity</Link></li>
+                <li><Link href="#" className="hover:text-white">Family Offices</Link></li>
               </ul>
             </div>
+
             <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Help Center</a></li>
-                <li><a href="#" className="hover:text-white">Contact</a></li>
-                <li><a href="#" className="hover:text-white">Status</a></li>
-                <li><a href="#" className="hover:text-white">Security</a></li>
+              <h3 className="font-semibold text-white mb-4">Resources</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li><Link href="#" className="hover:text-white">Blog</Link></li>
+                <li><Link href="#" className="hover:text-white">Case Studies</Link></li>
+                <li><Link href="#" className="hover:text-white">Help Center</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-white mb-4">Company</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li><Link href="#" className="hover:text-white">About Us</Link></li>
+                <li><Link href="#" className="hover:text-white">Careers</Link></li>
+                <li><Link href="#" className="hover:text-white">Contact</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 MIV Platform. All rights reserved.</p>
+
+          <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-4 md:mb-0">
+              <Logo />
+              <span className="ml-2 text-xl font-bold">MIV</span>
+            </div>
+            <div className="text-gray-400 text-sm">
+              © 2024 MIV. All rights reserved.
+            </div>
           </div>
         </div>
       </footer>
