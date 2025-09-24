@@ -1,4 +1,5 @@
 "use client"
+import ReadinessTracker from "@/components/ui/readiness-tracker";
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +31,14 @@ interface Recommendation {
   id: string
   text: string
   completed: boolean
+}
+export default function Page() {
+  return (
+    <main>
+      <h1>Dashboard</h1>
+      <ReadinessTracker />
+    </main>
+  )
 }
 
 interface DiagnosticArea {
@@ -804,3 +813,4 @@ export default function Diagnostics() {
     </>
   )
 }
+Integrate Readiness Tracker component into dashboard page
