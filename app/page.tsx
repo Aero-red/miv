@@ -61,9 +61,7 @@ import {
   Globe2,
   Lock,
   RefreshCw,
-  Brain,
-  Facebook,
-  Linkedin
+  Brain
 } from "lucide-react"
 import { Logo } from "@/components/logo"
 
@@ -72,9 +70,6 @@ export default function HomePage() {
   const [activeSection, setActiveSection] = useState('hero')
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false)
-  const [fontSize, setFontSize] = useState(16)
-  const [colorScheme, setColorScheme] = useState('default')
 
   // Intersection Observer for smooth scrolling
   useEffect(() => {
@@ -95,21 +90,6 @@ export default function HomePage() {
     return () => observer.disconnect()
   }, [])
 
-  // Apply accessibility settings
-  useEffect(() => {
-    document.documentElement.style.fontSize = `${fontSize}px`
-    
-    // Remove existing theme classes
-    document.documentElement.classList.remove('high-contrast', 'dark-mode')
-    
-    // Apply color scheme
-    if (colorScheme === 'high-contrast') {
-      document.documentElement.classList.add('high-contrast')
-    } else if (colorScheme === 'dark') {
-      document.documentElement.classList.add('dark-mode')
-    }
-  }, [fontSize, colorScheme])
-
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -129,7 +109,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-grey-300 via-[#f4f4f4] to-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -154,12 +134,6 @@ export default function HomePage() {
                 Solutions
               </button>
               <button 
-                onClick={() => scrollToSection('reviews')}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Reviews
-              </button>
-              <button 
                 onClick={() => scrollToSection('pricing')}
                 className="text-gray-600 hover:text-gray-900 transition-colors"
               >
@@ -182,13 +156,13 @@ export default function HomePage() {
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center space-x-4">
               <Link href="/auth/login">
-                <Button variant="ghost" size="sm" className="sign-in-btn">
+                <Button variant="ghost" size="sm">
                   <LogIn className="h-4 w-4 mr-2" />
                   Sign In
                 </Button>
               </Link>
               <Link href="/dashboard">
-                <Button size="sm" className="get-started-btn">
+                <Button size="sm">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Get Started
                 </Button>
@@ -222,12 +196,6 @@ export default function HomePage() {
                 Solutions
               </button>
               <button 
-                onClick={() => { scrollToSection('reviews'); setIsMenuOpen(false); }}
-                className="block px-3 py-2 text-gray-600 hover:text-gray-900"
-              >
-                Reviews
-              </button>
-              <button 
                 onClick={() => { scrollToSection('pricing'); setIsMenuOpen(false); }}
                 className="block px-3 py-2 text-gray-600 hover:text-gray-900"
               >
@@ -246,11 +214,11 @@ export default function HomePage() {
                 Contact
               </button>
               <div className="pt-4 space-y-2">
-                <Button variant="ghost" size="sm" className="w-full sign-in-btn">
+                <Button variant="ghost" size="sm" className="w-full">
                   <LogIn className="h-4 w-4 mr-2" />
                   Sign In
                 </Button>
-                <Button size="sm" className="w-full get-started-btn">
+                <Button size="sm" className="w-full">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Get Started
                 </Button>
@@ -259,122 +227,6 @@ export default function HomePage() {
           </div>
         )}
       </nav>
-
-      {/* Accessibility Button */}
-      <button
-        onClick={() => setIsAccessibilityOpen(true)}
-        className="fixed top-20 right-4 z-40 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
-        aria-label="Open accessibility settings"
-      >
-        <Settings className="h-5 w-5" />
-      </button>
-
-      {/* Accessibility Side Panel */}
-      {isAccessibilityOpen && (
-        <>
-          {/* Overlay */}
-          <div 
-            className="fixed inset-0 bg-black/50 z-50" 
-            onClick={() => setIsAccessibilityOpen(false)}
-          />
-          
-          {/* Side Panel */}
-          <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Accessibility Settings</h2>
-                <button
-                  onClick={() => setIsAccessibilityOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                  aria-label="Close accessibility settings"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              
-              {/* Font Size Control */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Font Size
-                </label>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setFontSize(Math.max(12, fontSize - 2))}
-                    className="flex items-center justify-center w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    aria-label="Decrease font size"
-                  >
-                    <span className="text-lg font-bold">A-</span>
-                  </button>
-                  <span className="text-sm text-gray-600 min-w-[60px] text-center">
-                    {fontSize}px
-                  </span>
-                  <button
-                    onClick={() => setFontSize(Math.min(24, fontSize + 2))}
-                    className="flex items-center justify-center w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    aria-label="Increase font size"
-                  >
-                    <span className="text-lg font-bold">A+</span>
-                  </button>
-                </div>
-              </div>
-              
-              {/* Color Scheme Control */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Color Scheme
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="colorScheme"
-                      value="default"
-                      checked={colorScheme === 'default'}
-                      onChange={(e) => setColorScheme(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="text-sm">Default</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="colorScheme"
-                      value="high-contrast"
-                      checked={colorScheme === 'high-contrast'}
-                      onChange={(e) => setColorScheme(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="text-sm">High Contrast</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="colorScheme"
-                      value="dark"
-                      checked={colorScheme === 'dark'}
-                      onChange={(e) => setColorScheme(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="text-sm">Dark Mode</span>
-                  </label>
-                </div>
-              </div>
-              
-              {/* Reset Button */}
-              <Button 
-                onClick={() => {
-                  setFontSize(16)
-                  setColorScheme('default')
-                }}
-                variant="outline" 
-                className="w-full"
-              >
-                Reset to Default
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
 
             {/* Hero Section */}
       <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -393,7 +245,7 @@ export default function HomePage() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 text-center pb-20">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 text-center">
           {/* Status Badge */}
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-white/90 font-medium mb-8">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -403,27 +255,18 @@ export default function HomePage() {
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 mt-16 leading-relaxed text-center hero-title">
-            <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent py-2">
-              Mekong Inclusive Ventures
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+            <span className="block">The Future of</span>
+            <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Venture Intelligence
             </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-1xl text-slate-300 mb-24 max-w-4xl mx-auto leading-relaxed text-center">
-            Your central hub for managing your venture's growth — from diagnostics to readiness, GEDSI compliance, and capital facilitation — all in one place.
+          <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+            Unlock the power of AI-driven venture management. From deal sourcing to exit strategies, 
+            MIV provides the intelligence you need to make data-driven investment decisions.
           </p>
-
-          {/* What is this platform section */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8 max-w-4xl mx-auto text-center">
-            <h3 className="text-2xl font-bold text-white mb-4">What is this platform?</h3>
-            <p className="text-slate-300 leading-relaxed">
-              MIV is here to help your impact venture grow, guiding you through preparations for funding, tracking your progress, and centralising your venture data to one powerful platform! Our services include GEDSI compliance tracking, readiness assessments, and streamlined capital facilitation, to help you secure the resources you need.
-            </p>
-          </div>
-
-          {/* Small Gap */}
-          <div className="h-10"></div>
 
           {/* Key Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
@@ -452,6 +295,20 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <Link href="/dashboard">
+              <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-2xl font-semibold px-8 py-4 text-lg transform hover:scale-105 transition-all duration-200">
+                <Rocket className="mr-2 h-5 w-5" />
+                Get Started Free
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Button size="lg" className="bg-white/10 text-white hover:bg-white/20 font-semibold px-8 py-4 text-lg border border-white/30 backdrop-blur-md transform hover:scale-105 transition-all duration-200">
+              <Play className="mr-2 h-5 w-5" />
+              Watch Demo
+            </Button>
+          </div>
 
           {/* Trust Indicators */}
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-slate-400">
@@ -470,12 +327,28 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Floating Platform Preview */}
+        <div className="absolute bottom-8 right-8 hidden lg:block">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-2xl transform hover:scale-105 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <span className="text-white/60 text-xs">MIV Dashboard</span>
+            </div>
+            <div className="space-y-2">
+              <div className="h-2 bg-white/20 rounded-full"></div>
+              <div className="h-2 bg-white/20 rounded-full w-3/4"></div>
+              <div className="h-2 bg-white/20 rounded-full w-1/2"></div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Content sections with transparent backgrounds */}
-      <div>
-        {/* Features Section */}
-        <section id="features" className="py-20 bg-transparent">
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -563,13 +436,8 @@ export default function HomePage() {
         </div>
       </section>
 
-        {/* Section Separator */}
-        <div className="flex justify-center py-8">
-          <div className="w-1/2 h-px bg-gray-300"></div>
-        </div>
-
-        {/* Solutions Section */}
-        <section id="solutions" className="py-20 bg-transparent">
+      {/* Solutions Section */}
+      <section id="solutions" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -611,105 +479,15 @@ export default function HomePage() {
                 </div>
                 <h4 className="text-xl font-semibold mb-2">Venture Capital</h4>
                 <p className="text-gray-600 mb-4">Perfect for funds managing $10M - $100M</p>
-                <Button className="learn-more-btn">Learn More</Button>
+                <Button>Learn More</Button>
               </div>
             </div>
           </div>
         </div>
-        </section>
+      </section>
 
-        {/* Section Separator */}
-        <div className="flex justify-center py-8">
-          <div className="w-1/2 h-px bg-gray-300"></div>
-        </div>
-
-        {/* Latest Reviews Section */}
-        <section id="reviews" className="py-20 bg-transparent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Latest Reviews
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Review 1 */}
-            <Card className="border-0 shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Transformative Platform</h3>
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  MIV has completely revolutionized how we manage our venture pipeline. The GEDSI tracking capabilities alone have saved us countless hours and improved our impact reporting significantly.
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-3">
-                    S
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Sarah Johnson</div>
-                    <div className="text-xs text-gray-500">Impact Investment Director</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Review 2 */}
-            <Card className="border-0 shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Excellent Analytics</h3>
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  The AI-powered insights have helped us identify promising ventures we might have otherwise overlooked. The platform is intuitive and the support team is incredibly responsive.
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold mr-3">
-                    M
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Michael Chen</div>
-                    <div className="text-xs text-gray-500">Senior Investment Analyst</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Review 3 */}
-            <Card className="border-0 shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Game Changer for Impact Investing</h3>
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  As a fund focused on sustainable development in Southeast Asia, MIV has been indispensable. The capital facilitation features streamlined our investment process significantly.
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold mr-3">
-                    A
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Aisha Rahman</div>
-                    <div className="text-xs text-gray-500">Fund Managing Partner</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section id="pricing" className="py-20 bg-[#ededef]">
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -743,7 +521,7 @@ export default function HomePage() {
                     Email support
                   </li>
                 </ul>
-                <Button className="w-full get-started-btn">Get Started</Button>
+                <Button className="w-full">Get Started</Button>
               </CardContent>
             </Card>
 
@@ -776,7 +554,7 @@ export default function HomePage() {
                     Advanced reporting
                   </li>
                 </ul>
-                <Button className="w-full get-started-btn">Get Started</Button>
+                <Button className="w-full">Get Started</Button>
               </CardContent>
             </Card>
 
@@ -806,15 +584,15 @@ export default function HomePage() {
                     White-label options
                   </li>
                 </ul>
-                <Button variant="outline" className="w-full contact-sales-btn">Contact Sales</Button>
+                <Button variant="outline" className="w-full">Contact Sales</Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-        {/* About Section */}
-        <section id="about" className="py-20 bg-transparent">
+      {/* About Section */}
+      <section id="about" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -843,23 +621,23 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            <div className="bg-white p-8 rounded-2xl shadow-lg mission-card">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">Our Mission</h3>
+            <div className="bg-white p-8 rounded-2xl shadow-lg">
+              <h3 className="text-xl font-semibold mb-4">Our Mission</h3>
               <p className="text-gray-600 mb-6">
                 To democratize access to venture capital and create sustainable impact through technology-driven investment management.
               </p>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Target className="h-5 w-5 text-blue-500 mr-3" />
-                  <span className="text-gray-700">Inclusive Investment</span>
+                  <span>Inclusive Investment</span>
                 </div>
                 <div className="flex items-center">
                   <Globe className="h-5 w-5 text-green-500 mr-3" />
-                  <span className="text-gray-700">Sustainable Growth</span>
+                  <span>Sustainable Growth</span>
                 </div>
                 <div className="flex items-center">
                   <Users className="h-5 w-5 text-purple-500 mr-3" />
-                  <span className="text-gray-700">Community Impact</span>
+                  <span>Community Impact</span>
                 </div>
               </div>
             </div>
@@ -867,13 +645,8 @@ export default function HomePage() {
         </div>
       </section>
 
-        {/* Section Separator */}
-        <div className="flex justify-center py-8">
-          <div className="w-1/2 h-px bg-gray-300"></div>
-        </div>
-
-        {/* Contact Section */}
-        <section id="contact" className="py-20 bg-transparent">
+      {/* Contact Section */}
+      <section id="contact" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -915,77 +688,63 @@ export default function HomePage() {
                   rows={4}
                   placeholder="Message"
                 />
-                <Button className="w-full send-message-btn">Send Message</Button>
+                <Button className="w-full">Send Message</Button>
               </form>
             </div>
           </div>
         </div>
-        </section>
-      </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
                 <Logo />
+                <span className="ml-2 text-xl font-bold">MIV</span>
               </div>
               <p className="text-gray-400 mb-4">
-                Empowering inclusive ventures across Southeast <br /> Asia through innovative pipeline management.
+                Empowering inclusive ventures across Southeast Asia through innovative pipeline management.
               </p>
               <div className="flex space-x-4">
-                <a 
-                  href="https://www.facebook.com/MekongInclusiveVentures/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <Facebook className="h-5 w-5" />
+                <a href="#" className="text-gray-400 hover:text-white">
+                  <Globe className="h-5 w-5" />
                 </a>
-                <a 
-                  href="https://www.linkedin.com/company/mekong-inclusive-ventures/?originalSubdomain=kh" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <Linkedin className="h-5 w-5" />
+                <a href="#" className="text-gray-400 hover:text-white">
+                  <MessageCircle className="h-5 w-5" />
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  <Users className="h-5 w-5" />
                 </a>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Contact Details</h4>
-              <div className="text-gray-400 space-y-2">
-                <p className="leading-relaxed">
-                  #1381, National Road 2, Phum Tuol Roka,<br />
-                  Sangkat Chat Angre Krom,<br />
-                  Khan Meanchey Phnom Penh,<br />
-                  Cambodia
-                </p>
-              </div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">Features</a></li>
+                <li><a href="#" className="hover:text-white">Pricing</a></li>
+                <li><a href="#" className="hover:text-white">API</a></li>
+                <li><a href="#" className="hover:text-white">Integrations</a></li>
+              </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Phone Numbers</h4>
-              <div className="space-y-2 text-gray-400">
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2" />
-                  <a href="tel:+85517350544" className="hover:text-white transition-colors">
-                    +855 17 350 544
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2" />
-                  <a href="tel:+85516708848" className="hover:text-white transition-colors">
-                    +855 16 708 848
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2" />
-                  <a href="tel:+85588733492" className="hover:text-white transition-colors">
-                    +855 88 733 4902
-                  </a>
-                </div>
-              </div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">About</a></li>
+                <li><a href="#" className="hover:text-white">Blog</a></li>
+                <li><a href="#" className="hover:text-white">Careers</a></li>
+                <li><a href="#" className="hover:text-white">Press</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">Help Center</a></li>
+                <li><a href="#" className="hover:text-white">Contact</a></li>
+                <li><a href="#" className="hover:text-white">Status</a></li>
+                <li><a href="#" className="hover:text-white">Security</a></li>
+              </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
